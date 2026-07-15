@@ -39,6 +39,12 @@ java -cp out TerminalSimulation
 
 This is a desktop Swing application, so it does not run through GitHub Pages.
 
+## Defense study guide
+
+See [STUDY_GUIDE.md](STUDY_GUIDE.md) for a beginner-friendly walkthrough of the
+Java concepts, every project class, passenger and bus flows, common defense
+questions, presentation roles, and study plan.
+
 ## Project structure
 
 - TerminalSimulation builds the Swing window and handles user input.
