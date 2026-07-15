@@ -37,4 +37,3 @@ java -cp out TerminalSimulation
 ```
 
 This is a desktop Swing application, so it does not run through GitHub Pages.
-GitHub Actions automatically checks that the source compiles.
