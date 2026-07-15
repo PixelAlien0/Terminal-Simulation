@@ -1,0 +1,7 @@
+enum BusState {
+    ARRIVING,
+    LOADING,
+    WAITING_FOR_DEPARTURE,
+    DEPARTING,
+    DEPARTED
+}

@@ -1,5 +1,6 @@
 *.class
 out/
+out-*/
 build/
 dist/
 .idea/
