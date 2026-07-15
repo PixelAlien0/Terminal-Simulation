@@ -5,6 +5,7 @@ final class SimulationConfig {
     static final int WINDOW_WIDTH = 1380;
     static final int WINDOW_HEIGHT = 720;
     static final int LOG_MAX_LINES = 500;
+    static final int MAX_PASSENGERS = 160;
 
     static final int PASSENGER_SPEED = 4;
     static final int BUS_CAPACITY = 20;

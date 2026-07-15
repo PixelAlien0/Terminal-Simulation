@@ -1,6 +1,8 @@
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 public final class SimulationEngineTest {
@@ -24,7 +26,7 @@ public final class SimulationEngineTest {
         check(engine.removePassenger(passenger.id), "Passenger deletion should succeed");
         check(engine.findPassenger(passenger.id) == null, "Deleted passenger remains in working list");
         check(!isPassengerOnBus(bus, passenger), "Deleted passenger remains in a bus seat");
-        check(engine.validateInvariants().isEmpty(), "Deletion left invalid engine state");
+        checkEngineState(engine);
     }
 
     private static void deletingBusReturnsPassengerToPlatform() {
@@ -40,10 +42,10 @@ public final class SimulationEngineTest {
                 "Passenger was not sent back to the platform"
         );
         check(
-                engine.getPlatformPassengers().contains(passenger),
+                engine.platformPassengers().contains(passenger),
                 "Passenger is missing from the platform queue"
         );
-        check(engine.validateInvariants().isEmpty(), "Bus deletion left invalid engine state");
+        checkEngineState(engine);
     }
 
     private static void updatingAssignedPassengerRequeuesForNewDestination() {
@@ -60,10 +62,10 @@ public final class SimulationEngineTest {
         check(passenger.assignedBus == null, "Updated passenger remains assigned to old bus");
         check(!isPassengerOnBus(bus, passenger), "Updated passenger remains in old bus seat");
         check(
-                engine.getPlatformPassengers().contains(passenger),
+                engine.platformPassengers().contains(passenger),
                 "Updated passenger was not requeued"
         );
-        check(engine.validateInvariants().isEmpty(), "Destination update left invalid engine state");
+        checkEngineState(engine);
     }
 
     private static void identifiersAreTrimmedAndCaseInsensitive() {
@@ -81,11 +83,8 @@ public final class SimulationEngineTest {
         for (int tick = 0; tick < 7_500; tick++) {
             engine.update(SimulationConfig.FRAME_DELAY_MS);
             if (tick % 100 == 0) {
-                check(
-                        engine.validateInvariants().isEmpty(),
-                        "Long-running simulation violated a state invariant"
-                );
-                for (Bus bus : engine.getActiveBuses()) {
+                checkEngineState(engine);
+                for (Bus bus : engine.buses()) {
                     check(
                             bus.getPassengerCount() <= bus.capacity,
                             "Bus exceeded its passenger capacity"
@@ -162,5 +161,21 @@ public final class SimulationEngineTest {
             }
         }
         return false;
+    }
+
+    private static void checkEngineState(SimulationEngine engine) {
+        Set<Person> known = new HashSet<Person>(engine.passengers());
+        for (Bus bus : engine.buses()) {
+            for (Person passenger : bus.boardingLine) {
+                check(known.contains(passenger), "Unknown passenger in boarding line");
+                check(passenger.assignedBus == bus, "Incorrect boarding-line assignment");
+            }
+            for (Person passenger : bus.seats) {
+                if (passenger != null) {
+                    check(known.contains(passenger), "Unknown passenger in bus seat");
+                    check(passenger.assignedBus == bus, "Incorrect seat assignment");
+                }
+            }
+        }
     }
 }

@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
+@SuppressWarnings("serial")
 final class TerminalPanel extends JPanel {
     private final SimulationEngine engine;
     private final List<EnvironmentDecoration> decorations =
@@ -37,11 +38,11 @@ final class TerminalPanel extends JPanel {
             drawTicketBooth(canvas);
             drawScheduleBoard(canvas);
 
-            for (Bus bus : engine.getActiveBuses()) {
+            for (Bus bus : engine.buses()) {
                 bus.draw(canvas);
             }
 
-            List<Person> passengers = new ArrayList<Person>(engine.getWorkingPassengers());
+            List<Person> passengers = new ArrayList<Person>(engine.passengers());
             passengers.sort(Comparator.comparingInt(passenger -> passenger.y));
             for (Person passenger : passengers) {
                 if (passenger.state != PassengerState.SEATED_IN_BUS) {
@@ -135,8 +136,8 @@ final class TerminalPanel extends JPanel {
         canvas.setColor(Color.BLACK);
         canvas.drawString("TICKETS", 155, 325);
 
-        Person priorityClient = engine.getPriorityTicketClient();
-        Person regularClient = engine.getRegularTicketClient();
+        Person priorityClient = engine.ticketClient(true);
+        Person regularClient = engine.ticketClient(false);
         boolean priorityActive = priorityClient != null
                 && priorityClient.state == PassengerState.BUYING_TICKET;
         boolean regularActive = regularClient != null
@@ -201,7 +202,7 @@ final class TerminalPanel extends JPanel {
         String status = "NO BUS";
         Color statusColor = new Color(50, 90, 140);
 
-        for (Bus bus : engine.getActiveBuses()) {
+        for (Bus bus : engine.buses()) {
             if (bus.bayId != bay) {
                 continue;
             }
@@ -237,13 +238,50 @@ final class TerminalPanel extends JPanel {
         canvas.setFont(new Font("Monospaced", Font.BOLD, 14));
         canvas.drawString("TERMINAL SIM", 20, 28);
         canvas.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        canvas.drawString("Prio Queue: " + engine.getPriorityTicketQueueSize(), 20, 48);
-        canvas.drawString("Reg Queue: " + engine.getRegularTicketQueueSize(), 20, 66);
-        canvas.drawString("Lounge Queue: " + engine.getPlatformQueueSize(), 20, 84);
+        canvas.drawString("Prio Queue: " + engine.ticketCount(true), 20, 48);
+        canvas.drawString("Reg Queue: " + engine.ticketCount(false), 20, 66);
+        canvas.drawString("Lounge Queue: " + engine.platformCount(), 20, 84);
         canvas.drawString(
                 "Booth: " + (engine.isTicketBoothOpen() ? "OPEN" : "CLOSED"),
                 20,
                 102
         );
+    }
+}
+
+final class EnvironmentDecoration {
+    private final String type;
+    private final int x;
+    private final int y;
+
+    EnvironmentDecoration(String type, int x, int y) {
+        this.type = type;
+        this.x = x;
+        this.y = y;
+    }
+
+    void draw(Graphics2D graphics) {
+        if ("Flower".equals(type)) {
+            graphics.setColor(new Color(230, 100, 150));
+            graphics.fillOval(x, y - 3, 6, 6);
+            graphics.fillOval(x - 3, y, 6, 6);
+            graphics.fillOval(x + 3, y, 6, 6);
+            graphics.fillOval(x, y + 3, 6, 6);
+            graphics.setColor(Color.YELLOW);
+            graphics.fillOval(x + 1, y + 1, 4, 4);
+        } else {
+            graphics.setColor(new Color(200, 200, 200));
+            graphics.fillRoundRect(x, y, 22, 35, 5, 5);
+            graphics.setColor(new Color(150, 150, 150));
+            for (int offset = 4; offset <= 16; offset += 6) {
+                graphics.fillRect(x + offset, y + 5, 2, 25);
+            }
+            graphics.setColor(Color.BLACK);
+            graphics.drawRoundRect(x, y, 22, 35, 5, 5);
+            graphics.setColor(new Color(180, 180, 180));
+            graphics.fillOval(x - 2, y - 5, 26, 10);
+            graphics.setColor(Color.BLACK);
+            graphics.drawOval(x - 2, y - 5, 26, 10);
+        }
     }
 }
