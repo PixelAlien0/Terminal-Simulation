@@ -1,216 +1,198 @@
-# Terminal Simulation Defense Study Guide
+# Terminal Simulation: Code and Defense Guide
 
-This guide explains the project for team members who are new to Java. Study the
-flow and responsibilities instead of memorizing every line.
+This guide is about the code that is actually in this repository. Its goal is
+to help every group member explain how the program starts, how one update works,
+where each passenger is stored, how states change, and how the cleanup rules
+prevent bugs.
 
-## 1. Project summary
+Do not memorize every line. For every feature, learn this four-part answer:
 
-The project is a Java Swing desktop simulation of a bus terminal. It shows:
+1. **Which class receives the action?**
+2. **Which method handles it?**
+3. **Which collection, field, or state changes?**
+4. **What visible result happens next?**
 
-- regular and priority passengers;
-- two ticket queues;
-- a platform waiting area;
-- four bus bays;
-- buses arriving, loading, and departing;
-- Davao and Tagum destinations;
-- passenger CRUD and bus-management controls; and
-- pixel-art animation drawn with Java graphics.
+Example:
 
-### Short defense description
+> The Create Passenger button is handled by `TerminalSimulation`. It calls
+> `SimulationEngine.createPassengerWithLog`, which creates a `Person`, adds it
+> to one ticket-lane queue and the master passenger list, then recalculates the
+> queue targets. The timer later moves that passenger toward the ticket booth.
 
-> Our project simulates how passengers move through a bus terminal. Passengers
-> obtain tickets, wait on the platform, board a matching bus, and leave with that
-> bus. We used Java Swing for the interface, object-oriented classes for
-> passengers and buses, enum-based states for the workflow, and a simulation
-> engine to keep the rules separate from the graphics.
+That kind of answer proves that you understand the program instead of only
+knowing its output.
 
-## 2. Architecture at a glance
+## 1. The project in 60 seconds
 
-```mermaid
-flowchart TD
-    Main["TerminalSimulation<br/>Window and controls"]
-    Engine["SimulationEngine<br/>Rules and live data"]
-    Panel["TerminalPanel<br/>Pixel-art renderer"]
-    Person["Person<br/>Passenger model"]
-    Bus["Bus<br/>Bus model"]
-    Config["SimulationConfig<br/>Constants"]
-    States["PassengerState / BusState<br/>Allowed states"]
-    Tests["SimulationEngineTest<br/>Regression checks"]
+The project is a Java Swing desktop simulation of a bus terminal. It has two
+ticket lines, a platform, four bus bays, regular and priority passengers, and
+buses for Davao and Tagum. The program repeatedly updates the simulation data
+and then redraws the current state as pixel art.
 
-    Main --> Engine
-    Main --> Panel
-    Panel --> Engine
-    Engine --> Person
-    Engine --> Bus
-    Engine --> Config
-    Person --> States
-    Bus --> States
-    Tests --> Engine
-    Tests --> Panel
+The main separation is:
+
+- `TerminalSimulation` creates the window and handles buttons and dialogs.
+- `SimulationEngine` owns the live data and all simulation rules.
+- `TerminalPanel` reads the engine and draws one frame.
+- `Person` stores and moves one passenger.
+- `Bus` stores one bus, its boarding line, and its 20 seats.
+- The two enum files define the allowed passenger and bus states.
+- `SimulationConfig` gives names to timing, capacity, and layout values.
+
+The central idea is simple:
+
+```text
+user or timer -> TerminalSimulation -> SimulationEngine changes data
+                                    -> TerminalPanel reads data and draws it
 ```
 
-The design is inspired by Model-View-Controller:
+## 2. Source map: what calls what
 
-- **Model:** `Person`, `Bus`, and their states.
-- **View:** `TerminalPanel` draws the simulation.
-- **Controller and rules:** `SimulationEngine` changes the model.
-- **Application/UI controller:** `TerminalSimulation` handles buttons and dialogs.
+| File | Important methods | Called by | What it changes or returns |
+|---|---|---|---|
+| `TerminalSimulation.java` | `main`, constructor, `updateFrame` | Java and Swing | Creates the UI, advances the engine, requests painting |
+| `TerminalSimulation.java` | `createPassenger`, `updatePassenger`, `deletePassenger`, `addBus`, `deleteBus` | Button listeners | Collects user input and calls the engine |
+| `SimulationEngine.java` | `initialize`, `update` | Window constructor and timer | Creates initial data and runs simulation rules |
+| `SimulationEngine.java` | passenger and bus CRUD methods | UI and tests | Mutates passengers, buses, queues, lines, and seats |
+| `SimulationEngine.java` | `updateSpawning`, `updateBuses`, `updateTicketLane`, `movePassengers` | `update` | Advances one fixed simulation step |
+| `Person.java` | constructor, `setTarget`, `stepTowardTarget`, `draw` | Engine and panel | Stores, moves, and draws one passenger |
+| `Bus.java` | seat methods and `draw` | Engine and panel | Stores capacity and draws one bus |
+| `TerminalPanel.java` | `paintComponent` and drawing helpers | Swing | Reads engine data and draws one frame |
+| `SimulationEngineTest.java` | six test methods | Test `main` | Checks cleanup, IDs, long runs, capacity, and painting |
 
-It is not a strict MVC framework, but the responsibilities are separated in a
-similar way.
+The smaller Java files are separate **classes** and **enums**, not methods.
+Methods are the named actions inside those classes, such as `update`,
+`removePassenger`, and `draw`.
 
-## 3. Java basics needed for the defense
+## 3. Exact startup path
 
-### Class
-
-A class is a blueprint. `Person` describes the information and behavior that
-every passenger has.
-
-### Object
-
-An object is one instance created from a class. Passenger `P1` and passenger
-`P2` are different `Person` objects.
-
-### Field
-
-A field stores an object's data. Examples are `Person.id`, `Person.x`, and
-`Bus.destination`.
-
-### Method
-
-A method performs an action. Examples are `removePassenger`, `loadBus`, and
-`draw`.
-
-### Constructor
-
-A constructor initializes a new object. It has the same name as its class:
-
-```java
-Person(String id, String destination, int startX, int startY,
-       boolean isPriority, int arrivalOrder)
-```
-
-### Enum
-
-An enum is a limited set of valid values. A passenger cannot have a random text
-state; the state must be one of the values in `PassengerState`.
-
-### List
-
-A list stores multiple objects.
-
-- `ArrayList` is useful for general collections and indexed access.
-- `LinkedList` is useful here for queues where the first person is processed
-  and removed.
-
-### Array
-
-An array has a fixed size. Each bus uses a `Person[]` array with 20 positions,
-representing 20 seats.
-
-### Inheritance
-
-`TerminalSimulation extends JFrame`, so it inherits the behavior of a Swing
-window. `TerminalPanel extends JPanel`, so it can be placed inside that window
-and painted.
-
-### Method overriding
-
-`TerminalPanel` overrides `paintComponent`. Swing calls this method whenever
-the panel needs to be redrawn.
-
-### Lambda expression
-
-This is a short way to provide an action:
-
-```java
-event -> createPassenger()
-```
-
-It means: when the event occurs, call `createPassenger`.
-
-### final
-
-`final` means something should not be reassigned or extended.
-
-- A final class cannot be subclassed.
-- A final field cannot point to a different object after construction.
-- A `static final` primitive or string is normally a constant.
-
-### private and package-private
-
-- `private` members are only accessible inside their class.
-- Members without an access modifier are package-private and can be used by
-  other classes in the same package.
-
-The project uses one simple default package, which is acceptable for a small
-school application. A larger project would normally use named packages.
-
-## 4. What happens when the program starts
-
-1. Java calls `TerminalSimulation.main`.
-2. `SwingUtilities.invokeLater` schedules UI creation on Swing's Event
-   Dispatch Thread.
-3. The `TerminalSimulation` constructor creates the log, engine, drawing panel,
-   and buttons.
-4. `engine.initialize()` creates 22 starting passengers.
-5. A Swing `Timer` requests updates approximately every 16 milliseconds.
-6. `updateFrame` calculates elapsed time.
-7. `engine.update(16)` advances the simulation in fixed steps.
-8. `terminalPanel.repaint()` asks Swing to draw the latest state.
+When the program is launched, the calls happen in this order:
 
 ```mermaid
 sequenceDiagram
     participant Java
+    participant EDT as Swing Event Dispatch Thread
     participant Window as TerminalSimulation
     participant Engine as SimulationEngine
-    participant View as TerminalPanel
+    participant Panel as TerminalPanel
 
-    Java->>Window: main()
+    Java->>EDT: SwingUtilities.invokeLater(...)
+    EDT->>Window: new TerminalSimulation()
+    Window->>Engine: new SimulationEngine(this::appendLog)
+    Window->>Panel: new TerminalPanel(engine)
     Window->>Engine: initialize()
-    Engine-->>Window: 22 starting passengers
-    loop About every 16 ms
-        Window->>Engine: update(16)
-        Engine->>Engine: update queues, buses, and movement
-        Window->>View: repaint()
-        View->>Engine: read current passengers and buses
-        View-->>Window: draw current frame
-    end
+    Engine->>Engine: create 22 starting passengers
+    Window->>EDT: start Swing Timer (16 ms)
+    EDT->>Window: setVisible(true)
 ```
 
-## 5. File-by-file explanation
+### Step-by-step explanation
 
-### SimulationConfig.java
+1. Java looks for `public static void main(String[] args)` in
+   `TerminalSimulation`.
+2. `main` calls `SwingUtilities.invokeLater`. This schedules window creation on
+   Swing's Event Dispatch Thread, or EDT.
+3. The `TerminalSimulation` constructor creates the log, engine, drawing panel,
+   controls, and frame layout.
+4. The engine receives `this::appendLog`. That is a method reference, so the
+   engine can report messages without directly knowing about `JTextArea`.
+5. `engine.initialize()` logs the start and creates 22 passengers. Each gets a
+   random route, and about 20% are priority passengers.
+6. The constructor records `System.nanoTime()` and starts a Swing `Timer` with a
+   16 ms delay.
+7. After construction finishes, `setVisible(true)` shows the window.
 
-This file contains values that configure the simulation.
+All button events, timer events, and normal painting happen on the EDT. This
+project therefore does not have background threads simultaneously modifying the
+engine collections.
 
-Important constants:
+## 4. The heartbeat: one timer event and one engine step
 
-| Constant | Meaning |
-|---|---|
-| `FRAME_DELAY_MS` | Length of one simulation step: 16 ms |
-| `MAX_FRAME_CATCH_UP_MS` | Prevents huge update loops after a freeze |
-| `WINDOW_WIDTH`, `WINDOW_HEIGHT` | Starting window size |
-| `LOG_MAX_LINES` | Maximum event-log size |
-| `MAX_PASSENGERS` | Automatic spawning limit |
-| `PASSENGER_SPEED` | Pixels moved during one simulation step |
-| `BUS_CAPACITY` | Seats per bus |
-| `TICKET_SERVICE_MS` | Ticket transaction duration |
-| `BOARDING_INTERVAL_MS` | Delay between regular boarders |
-| `BUS_LOADING_COUNTDOWN_MS` | Loading countdown: 60 seconds |
+The Swing timer calls `TerminalSimulation.updateFrame`. It does not blindly
+assume that exactly 16 ms passed. It measures real elapsed time with
+`System.nanoTime`, adds the time to `accumulatedMs`, and processes as many fixed
+16 ms steps as needed.
 
-Why use constants?
+```java
+while (accumulatedMs >= SimulationConfig.FRAME_DELAY_MS) {
+    engine.update(SimulationConfig.FRAME_DELAY_MS);
+    accumulatedMs -= SimulationConfig.FRAME_DELAY_MS;
+}
+terminalPanel.repaint();
+```
 
-- The meaning is clearer than writing unexplained numbers.
-- A value can be changed in one place.
-- It reduces accidental inconsistencies.
+The elapsed time added during one timer event is capped at 250 ms. Without that
+cap, returning from a long pause could cause a very large catch-up loop and make
+the interface freeze again.
 
-The constructor is private because this class is not supposed to be instantiated.
-It only holds constants.
+### Exact order inside `SimulationEngine.update`
 
-### PassengerState.java
+```text
+1. updateSpawning(elapsedMs)
+2. updateBuses(elapsedMs)
+3. updateTicketLane(priorityLane, elapsedMs)
+4. updateTicketLane(regularLane, elapsedMs)
+5. movePassengers()
+```
 
-This enum lists every valid passenger state:
+The order matters. Bus selection occurs before passenger movement during a
+step. A passenger who reaches the platform in step 10 changes to
+`WAITING_ON_PLATFORM` near the end of that step, so a bus can select them in a
+later step, not earlier in step 10.
+
+After all required engine steps, `repaint()` requests a redraw. Swing later
+calls `TerminalPanel.paintComponent`. `repaint` is a request; it does not call
+the drawing code immediately.
+
+## 5. Where the live data is stored
+
+`SimulationEngine` owns five important working collections:
+
+| Data structure | Field | Contents | Why it fits |
+|---|---|---|---|
+| `LinkedList<Person>` | `priorityLane.queue` | Priority ticket line | The front passenger is served first |
+| `LinkedList<Person>` | `regularLane.queue` | Regular ticket line | The front passenger is served first |
+| `LinkedList<Person>` | `platform` | Ticketed passengers waiting or walking to the platform | It preserves arrival order |
+| `ArrayList<Person>` | `passengers` | Master list of all active passengers | Easy to iterate, search, list, move, and draw |
+| `ArrayList<Bus>` | `buses` | All active buses | Small list that is repeatedly iterated |
+
+Each `Bus` also owns:
+
+- `Person[] seats`: a fixed array of 20 seat positions;
+- `ArrayList<Person> boardingLine`: regular passengers waiting beside that bus.
+
+### The most important invariant
+
+An active passenger must be in the engine's master `passengers` list. Their
+current working location may also be one of these:
+
+- one ticket queue;
+- the platform list;
+- one bus boarding line; or
+- one bus seat.
+
+A seat is reserved before the passenger physically reaches it. Therefore a
+passenger can already be in `bus.seats` while their state is
+`WALKING_TO_BUS`. When they reach the seat coordinate, the state becomes
+`SEATED_IN_BUS`.
+
+The master list and a location collection have different jobs. The master list
+answers "which passengers still exist?" The other structures answer "where is
+each passenger in the workflow?"
+
+### Read-only collection views
+
+Methods such as `passengers()` and `buses()` return
+`Collections.unmodifiableList(...)`. The UI can read and iterate those lists,
+but it cannot call `add` or `remove` through the returned reference. This helps
+keep mutations inside `SimulationEngine`.
+
+It is a read-only **view**, not a separate copied list, so it reflects later
+engine changes.
+
+## 6. Passenger states and exact regular-passenger journey
+
+The allowed states come from `PassengerState`:
 
 ```mermaid
 flowchart LR
@@ -218,54 +200,139 @@ flowchart LR
     B --> C["BUYING_TICKET"]
     C --> D["WALKING_TO_PLATFORM"]
     D --> E["WAITING_ON_PLATFORM"]
-    E --> F["MOVING_TO_BAY_LINE<br/>(regular)"]
+    E --> F["MOVING_TO_BAY_LINE"]
     F --> G["WAITING_IN_BAY_LINE"]
     G --> H["WALKING_TO_BUS"]
-    E --> H
     H --> I["SEATED_IN_BUS"]
 ```
 
-Priority passengers normally go from the platform directly to
-`WALKING_TO_BUS`. Regular passengers first join the bay line.
+### A. Creation
 
-Why use an enum instead of strings?
+For a manually created regular passenger going to Davao:
 
-- The compiler catches spelling mistakes.
-- Only valid states can be assigned.
-- A switch statement can handle each state clearly.
+1. The button listener calls the window's `createPassenger` method.
+2. Dialogs collect `Regular` and `Davao`.
+3. The window calls `engine.createPassengerWithLog(false, "Davao")`.
+4. `createPassenger` increments `passengerCounter` and creates an ID such as
+   `P23`.
+5. `normalizeDestination` converts valid capitalization to exactly `Davao` or
+   `Tagum`; any unsupported route throws `IllegalArgumentException`.
+6. The `Person` constructor starts the passenger at x = 10, around y = 350, in
+   `WALKING_TO_TICKET`.
+7. The engine adds the object to `regularLane.queue` and `passengers`.
+8. `positionTicketQueues` assigns target coordinates to everyone in both
+   ticket queues.
 
-### Person.java
+The quick Regular and Priority buttons use `createRandomPassenger`, which picks
+a random destination. The detailed Create Passenger button uses dialogs and
+also writes a CRUD message to the log.
 
-`Person` is the passenger model and passenger sprite.
+### B. Walking and buying a ticket
 
-Important fields:
+`movePassengers` calls `stepTowardTarget()` on every active passenger. The
+method moves x and y toward the target by at most four pixels per fixed update.
+`Math.min` and `Math.max` prevent overshooting the target.
 
-| Field | Purpose |
-|---|---|
-| `id` | Unique ID such as P1 |
-| `destination` | Davao or Tagum |
-| `isPriority` | Whether priority rules apply |
-| `arrivalOrder` | Number displayed on the sprite |
-| `x`, `y` | Current screen position |
-| `targetX`, `targetY` | Destination position |
-| `state` | Current PassengerState |
-| `assignedBus` | Bus being boarded, or null |
-| `ticketTimerMs` | Remaining ticket transaction time |
+When the passenger first reaches their queue target:
 
-Important methods:
+- `stepTowardTarget()` returns `true`;
+- `movePassengers` changes `WALKING_TO_TICKET` to
+  `WAITING_FOR_TICKET`.
 
-- `setTarget(x, y)` changes where the passenger should walk.
-- `stepTowardTarget()` moves toward that target and returns `true` upon
-  arrival.
-- `draw(Graphics2D)` draws the person's body, number, destination letter,
-  priority star, shadow, and ticket progress bar.
+For the person at the front, `updateTicketLane` then targets the ticket booth.
+Once the front person is at the booth, the engine changes their state to
+`BUYING_TICKET` and sets `ticketTimerMs` to 320 ms. Each fixed update subtracts
+16 ms. When it reaches zero:
 
-The walking animation changes `animationFrame`, which creates a small body bob
-and alternating leg movement.
+1. `ticketLane.queue.remove()` removes the front person;
+2. `sendToPlatform` adds them to the platform list;
+3. their state becomes `WALKING_TO_PLATFORM`;
+4. platform and ticket targets are recalculated; and
+5. that lane waits another 320 ms before processing its next passenger.
 
-### BusState.java
+The two ticket lanes are updated separately. Priority passengers do not block
+the regular line, and both front clients can be processed during the same
+simulation period.
 
-The five bus states are:
+### C. Platform waiting
+
+`sendToPlatform` first removes the passenger from ticket and platform queues to
+avoid duplicates. It then adds the passenger to `platform` if needed, clears
+`assignedBus`, changes the state to `WALKING_TO_PLATFORM`, and calls
+`positionPlatform`.
+
+The platform list includes people still walking to their assigned platform
+spot. A bus may only select an entry whose state is exactly
+`WAITING_ON_PLATFORM`, so it cannot take someone before they arrive.
+
+When the target is reached, `movePassengers` changes the state from
+`WALKING_TO_PLATFORM` to `WAITING_ON_PLATFORM`.
+
+### D. Regular boarding
+
+While a matching bus is in `LOADING`, `loadBus` calls:
+
+```java
+takePlatformPassenger(bus.destination, false)
+```
+
+That method scans the platform from the front and selects the first passenger
+who is regular, waiting, and has the same destination. It removes that person
+using the iterator, so the loop does not cause a concurrent-modification error.
+
+The selected regular passenger:
+
+- gets state `MOVING_TO_BAY_LINE`;
+- gets `assignedBus = bus`;
+- is added to `bus.boardingLine`;
+- receives a line target from `positionBoardingLine`.
+
+At the target, `movePassengers` changes the state to
+`WAITING_IN_BAY_LINE`. Every 400 ms, the first regular passenger is removed
+from the line and passed to `reserveSeat`.
+
+### E. Seat reservation and departure
+
+`reserveSeat` asks `Bus.getRandomEmptySeat` for an empty array index. It then:
+
+1. changes the state to `WALKING_TO_BUS`;
+2. stores the bus in `assignedBus`;
+3. stores the passenger in `bus.seats[seatIndex]`; and
+4. sets the person's target to `bus.getSeatCoordinate(seatIndex)`.
+
+At that coordinate, `movePassengers` changes the state to `SEATED_IN_BUS`.
+The bus countdown starts only after the engine finds at least one seat occupant
+whose state is `SEATED_IN_BUS`.
+
+When the bus becomes full or its 60-second countdown reaches zero, the doors
+close. After a 4.8-second departure buffer, the bus moves right. Its seated
+passenger coordinates are updated with the moving bus. Once the bus is beyond
+the window, `removeDepartedBuses` removes its seat occupants from the master
+passenger list, clears the seats, and removes the bus.
+
+## 7. How priority passengers differ
+
+Priority passengers use the priority ticket queue. At a loading bus,
+`loadBus` first asks for one matching priority passenger. If found, it calls
+`reserveSeat` immediately.
+
+Therefore priority passengers skip these regular-passenger states:
+
+- `MOVING_TO_BAY_LINE`
+- `WAITING_IN_BAY_LINE`
+
+They still need a ticket, must reach the platform, need a matching destination,
+walk to their seat, and become `SEATED_IN_BUS`.
+
+In one engine update, a bus can select one priority passenger for a seat and one
+regular passenger for its boarding line, as long as capacity reservations allow
+it. "Priority" here is implemented by checking priority passengers first and
+letting them bypass the boarding-line delay. It is not implemented with
+`java.util.PriorityQueue`.
+
+## 8. Bus creation and bus state flow
+
+The allowed bus states come from `BusState`:
 
 ```mermaid
 flowchart LR
@@ -275,634 +342,691 @@ flowchart LR
     D --> E["DEPARTED"]
 ```
 
-- **ARRIVING:** The bus moves from the right toward its bay.
-- **LOADING:** Passengers can be selected and seated.
-- **WAITING_FOR_DEPARTURE:** Doors are closed and a short buffer runs.
-- **DEPARTING:** The bus moves to the right.
-- **DEPARTED:** The engine removes the bus and its completed passengers.
+### Automatic bus creation
 
-### Bus.java
+`updateSpawning` adds elapsed time to `busSpawnMs` only when bus operations are
+running and there are fewer than four buses. At 19,200 ms, `spawnBus` finds all
+free bays and randomly chooses one.
 
-`Bus` stores bus information and draws the bus sprite.
+For automatically spawned buses:
 
-Important fields:
+- bays 1 and 2 serve Davao;
+- bays 3 and 4 serve Tagum.
 
-| Field | Purpose |
-|---|---|
-| `busId` | Display ID such as Davao Exp A (B1) |
-| `destination` | Route served by the bus |
-| `bayId` | Bay number 1–4 |
-| `state` | Current BusState |
-| `seats` | Fixed 20-position passenger array |
-| `boardingLine` | Regular passengers waiting near the bus |
-| `countdownMs` | Remaining loading time |
-| `departureBufferMs` | Short pause before movement |
+### Manual bus creation
 
-Important methods:
+The Add Bus button asks for a route and calls `engine.addBus(destination)`.
+The engine finds free bays and randomly chooses one. A manually added Davao or
+Tagum bus can use any free bay because its requested destination is passed to
+`addBusAtBay`.
 
-- `getRandomEmptySeat` begins at a random index and searches for an empty seat.
-- `isFull` checks whether all 20 seats are occupied.
-- `getPassengerCount` counts non-null seats.
-- `getSeatCoordinate` converts a seat index to an on-screen position.
-- `draw` draws the body, windows, wheels, door, route color, capacity, and
-  countdown.
+`addBusAtBay` rejects bay numbers outside 1-4 and occupied bays. A new bus starts
+at x = 1400 in `ARRIVING` state. Its ID contains the line, A/B bay label, and a
+unique B number.
 
-A `null` seat means the seat is empty.
+### State processing in `updateBuses`
 
-### SimulationEngine.java
+| State | Code action | Transition condition |
+|---|---|---|
+| `ARRIVING` | subtract 8 from x | At x <= 620, set x to 620 and state to `LOADING` |
+| `LOADING` | call `loadBus` | Full or countdown reaches zero |
+| `WAITING_FOR_DEPARTURE` | subtract elapsed time from buffer | At zero, change to `DEPARTING` |
+| `DEPARTING` | add 6 to x and move seat coordinates | Beyond window width + 200, change to `DEPARTED` |
+| `DEPARTED` | cleaned by `removeDepartedBuses` | Bus and completed passengers are removed |
 
-This is the central rules class. It owns the changing simulation data.
+If bus operations are stopped, `updateBuses` returns immediately. Existing
+buses freeze in their current state, their timers stop, and automatic bus
+spawn time stops advancing. Passenger walking and ticket processing continue.
 
-Main collections:
+## 9. How capacity is enforced
 
-| Collection | Contents |
-|---|---|
-| Priority ticket lane | Priority passengers waiting for tickets |
-| Regular ticket lane | Regular passengers waiting for tickets |
-| `platform` | Ticketed passengers waiting for buses |
-| `passengers` | Master list of active passengers |
-| `buses` | Active buses |
+Every bus has a fixed `Person[20]` array. `null` means a seat is empty.
+`getPassengerCount` counts non-null positions, and `isFull` checks whether the
+count equals 20.
 
-The nested `TicketLane` class lets both ticket lanes use the same processing
-method. Each lane stores its queue position, row direction, and transaction
-delay.
+`getRandomEmptySeat` starts from a random array index and checks at most all 20
+positions, wrapping with `% capacity`. It returns an empty index or -1 if none
+exists.
 
-#### The update method
+Before adding a regular person to the boarding line, `loadBus` calculates:
 
 ```java
-void update(int elapsedMs) {
-    updateSpawning(elapsedMs);
-    updateBuses(elapsedMs);
-    // update both ticket lanes
-    movePassengers();
-}
+int reserved = bus.getPassengerCount() + bus.boardingLine.size();
 ```
 
-This is the simulation heartbeat. It performs four main jobs:
+This treats both occupied/reserved seats and the regular boarding line as
+reserved capacity. A regular passenger is added only when `reserved` is less
+than `capacity`.
 
-1. Spawn passengers and buses when their intervals are reached.
-2. Update every bus according to its current state.
-3. Process both ticket lanes.
-4. Move passengers and change their states when they arrive.
+If a priority passenger takes the last physical seat while a regular passenger
+is still in the line, the bus becomes full and the waiting regular passenger is
+sent back to the platform when the doors close. Capacity is still never more
+than 20.
 
-#### Passenger creation
+## 10. Exact button and CRUD behavior
 
-`createPassenger`:
+### Passenger actions
 
-1. increments the passenger counter;
-2. creates a unique ID;
-3. validates the destination;
-4. creates the `Person`;
-5. adds the person to the correct ticket lane;
-6. adds the person to the master list; and
-7. recalculates queue positions.
+| Button/action | Window method | Engine method | Main result |
+|---|---|---|---|
+| Quick Regular | listener in `createControls` | `createRandomPassenger(false)` | Random route, regular ticket queue |
+| Quick Priority | listener in `createControls` | `createRandomPassenger(true)` | Random route, priority ticket queue |
+| Create Passenger | `createPassenger` | `createPassengerWithLog` | Chosen type and destination, CRUD log |
+| List Passengers | `showPassengers` | `passengers()` | Read-only table of active passengers |
+| Update Passenger | `updatePassenger` | `findPassenger`, then `updatePassengerDestination` | Changes route and possibly detaches from a bus |
+| Delete Passenger | `deletePassenger` | `removePassenger` | Removes every reference to that passenger |
 
-#### Ticket processing
+### Passenger ID lookup
 
-`updateTicketLane` always looks at the first person in the lane:
+`promptId` trims input in the UI. The engine also calls `cleanId`, which rejects
+null/blank IDs and trims spaces. `findPassenger` uses `equalsIgnoreCase`, so
+`"  p12  "` can find passenger `P12`.
 
-1. Move the first person to the booth.
-2. Change the state to `BUYING_TICKET`.
-3. Reduce the ticket timer.
-4. Remove the person from the ticket queue when finished.
-5. Send the person to the platform.
-6. Apply a short transaction delay before the next customer.
+### Updating a destination
 
-This follows FIFO: first in, first out.
+`updatePassengerDestination` first finds the passenger and normalizes the new
+route.
 
-#### Bus loading
+- If the passenger is still in a ticket queue or unassigned on the platform,
+  only the destination field changes. Their current workflow continues.
+- If `detachFromBuses` finds them in a boarding line, seat, or with an assigned
+  bus reference, it removes the old bus references and calls `sendToPlatform`.
+  The passenger must then wait for a bus matching the new destination.
 
-`loadBus` performs the loading rules:
+This prevents a passenger updated to Tagum from remaining assigned to a Davao
+bus.
 
-1. Find one matching priority passenger and reserve a seat directly.
-2. Find one matching regular passenger and add them to the boarding line.
-3. At the boarding interval, move the first regular passenger into a seat.
-4. Start the countdown after somebody is fully seated.
-5. Close the bus when it is full or the countdown reaches zero.
-6. Return anyone still in the boarding line to the platform.
+### Deleting a passenger safely
 
-The destination must match:
+`removePassenger` performs cleanup in this order:
 
-```java
-passenger.destination.equals(bus.destination)
-```
+1. `findPassenger` locates the object.
+2. `removeFromQueues` removes it from both ticket queues and the platform.
+3. `detachFromBuses` removes it from every boarding line and seat and clears
+   `assignedBus`.
+4. `passengers.remove` removes it from the master list.
+5. Queue and platform positions are recalculated.
 
-#### Safe passenger deletion
+Searching every possible location is intentional. Removing only from the master
+list would leave a ghost passenger inside a bus.
 
-`removePassenger` removes the passenger from:
+### Bus actions
 
-- both ticket lanes;
-- the platform;
-- every bus boarding line;
-- every bus seat; and
-- the master passenger list.
+| Button/action | Window method | Engine method | Main result |
+|---|---|---|---|
+| Add Bus | `addBus` | `addBus` / `addBusAtBay` | Adds an arriving bus if a bay is free |
+| Delete Bus | `deleteBus` | `removeBus` | Removes bus and returns its passengers |
+| Stop/Resume Buses | `toggleBuses` | `toggleBusesStopped` | Freezes/resumes bus spawn, movement, loading, and timers |
+| Close/Open Booth | `toggleTicketBooth` | `toggleTicketBooth` | Pauses/resumes ticket service and automatic passenger creation |
 
-This fixes the old problem where a deleted passenger could remain counted inside
-a bus.
+### Deleting a bus safely
 
-#### Safe bus deletion
+`removeBus` removes the bus from the active bus list and calls
+`returnBusPassengers`. That method:
 
-`removeBus` first collects passengers from its boarding line and seats. It
-clears the bus references and sends those passengers back to the platform.
+1. copies boarding-line passengers into a `LinkedHashSet`;
+2. adds every non-null seat passenger to the same set;
+3. clears the line and fills the seat array with null;
+4. sends every still-active passenger back to the platform.
 
-This fixes the old problem where deleting a bus stranded its passengers.
+The set prevents the same passenger from being returned twice if inconsistent
+data ever placed the reference in more than one bus location.
 
-#### Destination update
+### Closing the ticket booth
 
-If the passenger is already assigned to a bus, changing the destination:
+When closed, `updateTicketLane` returns before starting or advancing a ticket
+transaction. Existing passengers may finish walking to their queue targets, but
+ticket service is frozen. Automatic passenger creation also stops because
+`updateSpawning` requires `ticketBoothOpen`. Manual creation buttons still work.
 
-1. removes them from the old bus;
-2. clears `assignedBus`;
-3. returns them to the platform; and
-4. lets a bus matching the new destination select them later.
+When reopened, `positionTicketQueues` refreshes the targets and processing
+continues from the saved states and timers.
 
-This prevents a Tagum passenger from remaining on a Davao bus.
+## 11. Collection mutation map
 
-#### Automatic limits
+This table is useful when the teacher asks, "Where exactly is that object
+added or removed?"
 
-Automatic passenger generation stops when there are 160 active passengers. This
-prevents unlimited memory and queue growth. Manual buttons can still demonstrate
-passenger creation.
+| Method | Adds to | Removes/clears from | Other important changes |
+|---|---|---|---|
+| `createPassenger` | one ticket queue, `passengers` | nothing | assigns unique ID and route |
+| `sendToPlatform` | `platform` if absent | both ticket queues and old platform entry | clears bus; state becomes `WALKING_TO_PLATFORM` |
+| `takePlatformPassenger` | nothing | `platform` through `Iterator.remove` | returns first matching passenger |
+| `loadBus` regular path | `bus.boardingLine` | platform through helper | assigns bus and line state |
+| `reserveSeat` | one `bus.seats` index | nothing directly | assigns bus, seat target, walking state |
+| `removePassenger` | nothing | queues, platform, bus lines, seats, master list | clears assignment |
+| `updatePassengerDestination` | platform only if previously assigned | old bus line/seat if assigned | changes destination |
+| `removeBus` | platform through helper | `buses`, bus line, all bus seats | clears each passenger assignment |
+| `removeDepartedBuses` | nothing | completed seat passengers from master list, seats, bus | clears assignments |
 
-### TerminalPanel.java
+## 12. Movement and rendering are separate
 
-`TerminalPanel` is the view. It reads engine data but does not decide who
-boards a bus.
+### Movement
 
-`paintComponent` draws layers in this order:
+The engine decides a target by calling `Person.setTarget`. The `Person` object
+does not decide which queue or bus it should use. It only knows how to move
+toward the given coordinates.
 
-1. terminal and road background;
-2. bay waiting areas;
-3. ticket booth;
-4. departure board;
-5. buses;
-6. passengers; and
-7. status panel.
+`stepTowardTarget` also advances a small four-frame walking animation. It
+returns `true` when both x and y equal the target. `movePassengers` uses that
+return value to perform state transitions.
 
-Passengers are sorted by Y coordinate before drawing. A lower passenger is drawn
-later, which gives a simple sense of depth.
+### Rendering
 
-Important Swing rule:
+Swing calls `TerminalPanel.paintComponent`. It:
 
-```java
-super.paintComponent(graphics);
-```
+1. calls `super.paintComponent` to clear the previous frame;
+2. creates a separate `Graphics2D` context;
+3. draws the background, waiting areas, ticket booth, and schedule board;
+4. draws all buses;
+5. copies and sorts passengers by y coordinate;
+6. draws passengers who are not `SEATED_IN_BUS`;
+7. draws the status panel; and
+8. disposes the copied graphics context in `finally`.
 
-This clears the previous frame correctly. The method also creates a copy of the
-`Graphics2D` context and disposes it afterward so drawing settings do not leak.
+Sorting by y means people lower on the screen are drawn later, creating simple
+visual depth. The copied list is important: sorting it does not reorder the
+engine's master passenger list.
 
-`EnvironmentDecoration` is kept in the same file because flowers and trash
-cans are only used by this renderer.
+The panel reads through engine getters. It never decides ticket order, assigns
+a bus, reserves a seat, or deletes data. That rule belongs to the engine.
 
-### TerminalSimulation.java
+### Why the pixel art uses many lines
 
-This is the application window and user-input layer.
+`Person.draw`, `Bus.draw`, and the `TerminalPanel` drawing helpers contain many
+`fillRect`, `drawRect`, `fillOval`, color, font, and coordinate statements.
+Those lines describe the artwork. They add to the source line count but do not
+make the simulation algorithm equally complicated.
 
-Responsibilities:
+No external image files are used. The art is recreated from drawing commands
+on every paint.
 
-- configure the JFrame;
-- create and style buttons;
-- show dialogs;
-- display the passenger table;
-- maintain the event log;
-- start the Swing timer; and
-- call the engine every frame.
+## 13. Data structures and algorithms you should be able to defend
 
-#### Fixed-step timing
+| Concept | Where used | What the code demonstrates |
+|---|---|---|
+| FIFO queue | Both `TicketLane.queue` lists | `peek` reads the front and `remove` serves the front |
+| Ordered waiting list | `platform` | Scans from the front for the first matching route and type |
+| Dynamic array list | `passengers`, `buses`, `boardingLine` | Stores a changing number of objects and supports iteration |
+| Fixed array | `Bus.seats` | Exactly 20 indexed seats; null means empty |
+| Linear search | `findPassenger`, `findBus`, `takePlatformPassenger` | Checks objects until a match is found |
+| State machine | `PassengerState`, `BusState`, switch statements | Behavior depends on a limited current state |
+| Circular scan | `getRandomEmptySeat` | Starts randomly and wraps with modulo |
+| Safe removal during iteration | Platform and departed-bus iterators | Uses `Iterator.remove` instead of modifying the list directly |
+| De-duplication | `LinkedHashSet` in `returnBusPassengers` | Returns each passenger once while preserving encounter order |
+| Sorting | Y-sort in `paintComponent` | Painter's-order visual depth |
+| Fixed time step | `updateFrame` accumulator | Runs logic in consistent 16 ms units |
 
-`updateFrame` uses `System.nanoTime()` to measure real elapsed time. It adds
-that time to an accumulator and processes 16 ms simulation steps.
+### Complexity answers
 
-Why not assume every timer event is exactly 16 ms?
+Let `n` be the active passenger count and `b` the active bus count.
 
-The operating system may deliver a timer event late. Measuring elapsed time
-keeps the simulation more consistent. Catch-up is capped at 250 ms so a long
-freeze does not cause a huge loop.
+- `findPassenger`: O(n) linear search.
+- `findBus` and `isBayFree`: O(b). Here b is at most four.
+- `takePlatformPassenger`: O(n) in the worst case.
+- `movePassengers`: O(n) per update.
+- `positionPlatform`: O(n).
+- `getRandomEmptySeat`: O(20), which is effectively O(1) because capacity is
+  fixed at 20.
+- counting or checking a bus: O(20), also effectively O(1).
+- passenger rendering sort: O(n log n), followed by O(n) drawing.
 
-#### Why SwingUtilities.invokeLater?
+The automatic passenger cap is 160, so these simple searches are reasonable for
+this educational simulation. More complicated indexing would add code without
+providing a meaningful benefit at this scale.
 
-Swing components should be created and changed on the Event Dispatch Thread.
-Using `invokeLater` follows Swing's thread-safety rule.
+## 14. What the tests prove
 
-#### Passenger table
+`SimulationEngineTest` is a plain Java test runner. Its `main` calls six checks
+and throws `AssertionError` when a condition is false.
 
-`showPassengers` creates a non-editable, sortable `JTable`. It displays each
-passenger's ID, destination, type, state, and assigned bus.
+| Test | Setup and assertion | Bug or rule protected |
+|---|---|---|
+| `deletingPassengerClearsSeatAndWorkingList` | Seats a person, deletes them, checks master list and seat | No ghost passenger after delete |
+| `deletingBusReturnsPassengerToPlatform` | Seats a person, deletes bus, checks state, assignment, platform | No stranded passenger after bus delete |
+| `updatingAssignedPassengerRequeuesForNewDestination` | Seats Davao passenger, changes to Tagum | No old-route bus reference |
+| `identifiersAreTrimmedAndCaseInsensitive` | Searches with spaces and lowercase | Friendly ID matching |
+| `simulationMaintainsInvariantsOverTime` | Runs 7,500 updates and checks references/capacity | Long-run consistency |
+| `terminalPanelPaintsHeadlessly` | Paints into a `BufferedImage` | Drawing can complete without a visible window |
 
-#### Log limit
+The tests use `new Random(7)`. A fixed seed repeats the same random choices, so a
+failure can be reproduced.
 
-`appendLog` removes old lines after the log exceeds 500 lines. This prevents
-the text area from growing forever.
+The long-run invariant check verifies that every passenger in a boarding line or
+seat also exists in the master list and points back to that same bus. It also
+checks that no bus exceeds capacity.
 
-### SimulationEngineTest.java
+## 15. Code-focused defense questions and answers
 
-This is a small test program without an external testing framework.
+Practice answering in your own words. Start with the responsible class and
+method, then name the data or state that changes.
 
-It checks:
+### Startup and timing
 
-- deleting a passenger clears their bus seat;
-- deleting a bus returns passengers to the platform;
-- updating a destination clears the old bus assignment;
-- IDs ignore spaces and capitalization;
-- a long 7,500-tick simulation preserves capacity and assignments; and
-- the panel can render into an off-screen image.
+#### 1. Where does execution begin?
 
-`new Random(7)` gives tests repeatable random behavior. The same seed produces
-the same sequence.
+In `TerminalSimulation.main`. It schedules construction with
+`SwingUtilities.invokeLater`, then the constructed frame is made visible.
 
-## 6. Complete passenger journey
+#### 2. Why is `SwingUtilities.invokeLater` used?
 
-Example: a regular passenger going to Davao.
+Swing expects component creation and UI changes on the Event Dispatch Thread.
+It also means timer actions, button actions, and normal painting use the same UI
+thread in this program.
 
-1. `createPassenger(false, "Davao")` creates P1.
-2. P1 enters the regular ticket queue.
-3. The movement update brings P1 to the queue position.
-4. P1 reaches the booth and becomes `BUYING_TICKET`.
-5. The ticket timer ends and P1 moves to the platform.
-6. A loading Davao bus searches the platform.
-7. P1 joins that bus's regular boarding line.
-8. The boarding interval expires.
-9. The engine reserves an empty seat.
-10. P1 walks to the seat and becomes `SEATED_IN_BUS`.
-11. The bus becomes full or reaches the end of its countdown.
-12. The bus closes, waits briefly, and departs.
-13. After it moves off-screen, the engine removes the bus and its completed
-    passengers.
+#### 3. What creates the 22 initial passengers?
 
-For a priority passenger, steps 7 and 8 are skipped; the passenger receives an
-available seat directly.
+The `TerminalSimulation` constructor calls `engine.initialize`. That method
+loops 22 times and calls `createRandomPassenger`.
 
-## 7. CRUD explanation
+#### 4. What exactly happens every timer event?
 
-CRUD means Create, Read, Update, and Delete.
+`updateFrame` measures elapsed nanoseconds, converts them to milliseconds, caps
+catch-up at 250 ms, runs zero or more 16 ms engine updates, and requests a panel
+repaint.
 
-| CRUD operation | Project example |
+#### 5. Why can one timer event call `engine.update` more than once?
+
+The timer may arrive late. The accumulator catches up using consistent 16 ms
+steps instead of passing one unpredictable large step to the engine.
+
+#### 6. In what order does one engine update run?
+
+Spawning, bus updates, priority ticket lane, regular ticket lane, then passenger
+movement.
+
+#### 7. Why does the order of `update` matter?
+
+It determines when a new state becomes visible to another rule. For example, a
+person who reaches the platform during `movePassengers` can be selected by a bus
+on a later update.
+
+### Passenger data and flow
+
+#### 8. Where is every active passenger stored?
+
+In `SimulationEngine.passengers`, the master `ArrayList`. A passenger can also
+appear in one workflow location such as a ticket queue, platform, bus line, or
+seat.
+
+#### 9. How is a passenger ID created?
+
+`createPassenger` increments `passengerCounter`, then uses `"P" +
+passengerCounter`.
+
+#### 10. How does the program know whether a passenger is regular or priority?
+
+The `Person.isPriority` boolean is set by the constructor and is final. The
+engine uses it to choose the ticket lane and boarding behavior.
+
+#### 11. How does a newly created passenger know where to walk?
+
+After adding the person to a lane, `positionTicketQueues` calculates each queue
+target and calls `Person.setTarget`.
+
+#### 12. What changes a passenger from walking to waiting?
+
+`Person.stepTowardTarget` reports arrival. `SimulationEngine.movePassengers`
+then switches the passenger state, such as `WALKING_TO_PLATFORM` to
+`WAITING_ON_PLATFORM`.
+
+#### 13. Who is served first in a ticket line?
+
+`updateTicketLane` uses `queue.peek()` and later `queue.remove()`, so the front
+passenger is served first: FIFO.
+
+#### 14. Is priority service a Java `PriorityQueue`?
+
+No. The program has two FIFO `LinkedList` ticket lanes. Priority boarding is a
+rule in `loadBus` that checks priority passengers first and skips their bay line.
+
+#### 15. Can both ticket lines serve someone at the same time?
+
+Yes. `update` calls `updateTicketLane` separately for both lanes during every
+fixed step. Each lane has its own client and transaction delay.
+
+#### 16. What prevents a bus from taking a passenger who is still walking to the platform?
+
+`takePlatformPassenger` requires the state to equal
+`WAITING_ON_PLATFORM`, not just membership in the platform list.
+
+#### 17. What three conditions must match in `takePlatformPassenger`?
+
+Passenger type, state `WAITING_ON_PLATFORM`, and destination equal to the bus
+destination.
+
+#### 18. How does a regular passenger enter a bus?
+
+`loadBus` removes the first matching regular person from the platform, assigns
+the bus, adds them to `boardingLine`, waits for the boarding interval, then calls
+`reserveSeat` for the front of the line.
+
+#### 19. How does a priority passenger enter a bus?
+
+`loadBus` finds a matching priority platform passenger first and calls
+`reserveSeat` directly, bypassing `boardingLine`.
+
+#### 20. At what moment is a passenger counted by `getPassengerCount`?
+
+As soon as `reserveSeat` stores the reference in `bus.seats`, even while the
+passenger state is still `WALKING_TO_BUS`.
+
+#### 21. When does that passenger become fully seated?
+
+After `stepTowardTarget` reaches the seat coordinate, `movePassengers` changes
+`WALKING_TO_BUS` to `SEATED_IN_BUS`.
+
+### Bus flow and capacity
+
+#### 22. How does the program prevent two buses from using one bay?
+
+`freeBays` checks bays 1-4, and `isBayFree` scans active buses for a matching
+`bayId`. `addBusAtBay` rejects an occupied bay.
+
+#### 23. How does an arriving bus reach its bay?
+
+In the `ARRIVING` switch case, `updateBuses` subtracts 8 from x per fixed step.
+At x <= 620 it snaps to 620 and changes state to `LOADING`.
+
+#### 24. What starts the 60-second loading countdown?
+
+`loadBus` scans the seat array. When at least one passenger in a seat has state
+`SEATED_IN_BUS`, it sets `countdownStarted` to true.
+
+#### 25. What closes a bus?
+
+Either `bus.isFull()` or a started countdown reaching zero. The state then
+changes from `LOADING` to `WAITING_FOR_DEPARTURE`.
+
+#### 26. What happens to regular passengers still in line when doors close?
+
+The line is copied and cleared, then each waiting passenger is sent back to the
+platform.
+
+#### 27. Why are seats an array instead of another unlimited list?
+
+The bus has an exact capacity and indexed screen coordinates. A fixed 20-element
+array directly represents the 20 seats.
+
+#### 28. How does `getRandomEmptySeat` avoid going outside the array?
+
+It checks `(start + offset) % capacity`, so the index wraps from the end back to
+zero.
+
+#### 29. What happens during `DEPARTING`?
+
+`moveBus` adds 6 to the bus x coordinate and recalculates each seat passenger's
+screen position so they move with the bus.
+
+#### 30. What finally removes a departed passenger from the simulation?
+
+`removeDepartedBuses` clears each seat passenger's bus reference and removes
+them from the master passenger list when their bus state is `DEPARTED`.
+
+#### 31. What exactly freezes when Stop Buses is pressed?
+
+`updateBuses` returns, so movement, loading, countdowns, and departures freeze.
+Automatic bus spawn timing also pauses. Ticket processing and passenger walking
+continue.
+
+### CRUD and cleanup
+
+#### 32. Why is List Passengers the Read part of CRUD?
+
+`showPassengers` reads `engine.passengers()` and builds a non-editable JTable
+showing ID, destination, type, state, and assigned bus.
+
+#### 33. What locations are checked when deleting a passenger?
+
+Both ticket queues, platform, every bus boarding line, every bus seat, and the
+master passenger list.
+
+#### 34. What bug would happen if deletion only used `passengers.remove`?
+
+A bus line or seat could still reference the deleted object, creating a ghost
+passenger and an incorrect capacity count.
+
+#### 35. What happens if a seated passenger's destination is updated?
+
+`detachFromBuses` removes them from the old seat and clears the assignment.
+`sendToPlatform` requeues them to wait for the new matching route.
+
+#### 36. What happens if a ticket-line passenger's destination is updated?
+
+They are not assigned to a bus, so only the destination changes. They continue
+through the same ticket line and later wait for the new route.
+
+#### 37. Why does deleting a bus use `LinkedHashSet`?
+
+It de-duplicates passenger references while preserving encounter order before
+the passengers are returned to the platform.
+
+#### 38. Why does `takePlatformPassenger` use an iterator?
+
+It needs to remove the current element during iteration. `Iterator.remove`
+performs that safely without a `ConcurrentModificationException`.
+
+#### 39. Is the CRUD data saved after the program closes?
+
+No. CRUD operates on in-memory Java collections. There is no database or file
+persistence in this version.
+
+#### 40. Can outside UI code add directly to the list returned by `passengers()`?
+
+No. The engine returns an unmodifiable view, so collection mutation stays in the
+engine methods.
+
+### Drawing and tests
+
+#### 41. Who calls `paintComponent`?
+
+Swing calls it after a repaint request or when the component needs redrawing.
+The project should not call `paintComponent` directly.
+
+#### 42. Why call `super.paintComponent` first?
+
+It clears and prepares the panel so pixels from older frames do not remain.
+
+#### 43. Why copy the passenger list before sorting it?
+
+The panel needs y-order only for drawing. Sorting a copy prevents visual order
+from changing the engine's master list order.
+
+#### 44. Why are seated passengers not drawn as walking sprites?
+
+`paintComponent` skips passengers whose state is `SEATED_IN_BUS`; they are
+represented as part of the bus rather than standing on top of it.
+
+#### 45. Does drawing change who boards a bus?
+
+No. Drawing only reads state. `SimulationEngine` performs selection, assignment,
+state transitions, and cleanup.
+
+#### 46. How does the long-running test check references?
+
+It builds a set from the master passenger list, then verifies every passenger in
+each bus line and seat is known and has `assignedBus` pointing to that bus.
+
+#### 47. Why use `Random(7)` in tests?
+
+It makes random choices repeatable, which makes failures reproducible.
+
+#### 48. How is rendering tested without opening a window?
+
+The test creates a `BufferedImage`, gets its `Graphics2D`, sizes a
+`TerminalPanel`, and paints into the image.
+
+### Design and honest limitations
+
+#### 49. Why is `SimulationEngine` separate from `TerminalPanel`?
+
+It keeps rules independent of painting. Cleanup and state behavior can be tested
+without requiring a visible GUI.
+
+#### 50. Is this strict MVC?
+
+It is MVC-inspired: models are `Person` and `Bus`, the view is
+`TerminalPanel`, and the engine/window share controller responsibilities. It
+does not use an MVC framework.
+
+#### 51. Why are there more lines than the original single-file program?
+
+The current version separates responsibilities, adds complete cleanup and tests,
+and keeps programmatic pixel-art drawing readable. More physical lines do not
+automatically mean a more complicated execution path.
+
+#### 52. What are the main limitations?
+
+Only two routes and four bays are modeled; layout coordinates are mostly fixed;
+data is not persistent; and terminal behavior is simplified for education.
+
+## 16. Trace drills: predict what happens next
+
+Try answering these before reading the answer key.
+
+### Drill A: passenger reaches the platform
+
+A Davao regular passenger is in `platform` with state
+`WALKING_TO_PLATFORM`. A Davao bus is loading. During this update the passenger
+reaches the platform target. Can that bus select the passenger in the same
+update?
+
+### Drill B: deleting a walking-to-bus passenger
+
+A passenger has state `WALKING_TO_BUS`, has an assigned bus, and already appears
+in one seat index. The user deletes the passenger. Which references are removed?
+
+### Drill C: closing the booth mid-transaction
+
+The front passenger is `BUYING_TICKET` with 160 ms remaining. The booth is
+closed for five seconds and reopened. Did the passenger finish during closure?
+
+### Drill D: deleting a bus
+
+A bus has two seated passengers and three regular passengers in its boarding
+line. The bus is manually deleted. Where do those five people go?
+
+### Drill E: full bus with a waiting line
+
+A priority passenger takes the last empty seat while a regular passenger is
+still in the bus boarding line. What happens to the regular passenger?
+
+### Answer key
+
+- **A:** No. `updateBuses` runs before `movePassengers`. The state becomes
+  `WAITING_ON_PLATFORM` near the end of the update, so selection can happen on a
+  later update.
+- **B:** `removeFromQueues` checks queues and platform; `detachFromBuses`
+  removes the seat reference and clears `assignedBus`; then the master list
+  reference is removed.
+- **C:** No. `updateTicketLane` returns while the booth is closed, so the ticket
+  timer remains at 160 ms. It resumes after reopening.
+- **D:** `returnBusPassengers` clears the line and seats, then sends all five
+  active passengers back to the platform with no assigned bus.
+- **E:** The full-bus close condition runs, clears the boarding line, and sends
+  that regular passenger back to the platform.
+
+## 17. A code-centered demonstration plan
+
+During the demonstration, narrate methods instead of only clicking buttons:
+
+1. Start the program and say: "`main` constructs the UI on the EDT;
+   `initialize` creates 22 passengers; the Swing timer drives fixed updates."
+2. Create a regular passenger and say which two collections receive the object.
+3. Point out `WALKING_TO_TICKET`, `BUYING_TICKET`, and platform states in List
+   Passengers.
+4. Add a route-matching bus and explain `ARRIVING` to `LOADING`.
+5. Compare one regular boarding-line path with one priority direct-seat path.
+6. Update an assigned passenger's destination and explain detachment and
+   requeueing.
+7. Delete a passenger or bus and name every location that gets cleaned.
+8. Stop buses and explain why ticket and walking behavior can continue.
+
+If animation timing makes a live example slow, explain the method and state
+change while it runs. The code path is more important than waiting silently.
+
+## 18. How to discuss AI use honestly
+
+A safe and truthful answer is:
+
+> We used AI as a development assistant for review, refactoring, documentation,
+> and test ideas. We did not treat generated code as automatically correct. We
+> compiled it, ran regression checks, traced the actual methods and collections,
+> and studied how the current version works. We can explain the startup path,
+> update order, state transitions, data structures, cleanup rules, and current
+> limitations ourselves.
+
+Do not claim that every line was written manually if that is not true. The
+teacher's condition is understanding. Prove that understanding by naming the
+method, data change, state transition, and next result.
+
+## 19. Minimal Java vocabulary for explaining this code
+
+| Word | Meaning in this project |
 |---|---|
-| Create | Create Passenger button |
-| Read | List Passengers table |
-| Update | Change a passenger's destination |
-| Delete | Delete Passenger button |
-
-Bus controls also support creation and deletion.
-
-Important limitation: the CRUD data is in memory. Closing the application resets
-the simulation because there is no database or file persistence.
-
-If the teacher asks whether it is “real CRUD,” answer:
-
-> Yes, it performs CRUD operations on the live in-memory passenger collection.
-> It does not provide persistent database CRUD because persistence was outside
-> the simulation's scope.
-
-## 8. Object-oriented programming concepts in the project
-
-### Encapsulation
-
-Each class owns a specific responsibility. The engine controls simulation
-transitions, while the panel controls drawing.
-
-### Abstraction
-
-The UI calls `engine.removePassenger(id)` without needing to know every queue
-and seat that must be cleaned.
-
-### Inheritance
-
-`TerminalSimulation` inherits from `JFrame`, and `TerminalPanel` inherits
-from `JPanel`.
-
-### Composition
-
-The window contains an engine and a panel. A bus contains passengers in its seat
-array.
-
-### Polymorphism and overriding
-
-`TerminalPanel.paintComponent` overrides the JPanel method. Swing can treat the
-object as a JPanel while using the project's custom drawing implementation.
-
-## 9. Common defense questions and suggested answers
-
-### 1. What is the main objective of the project?
-
-To visually simulate passenger processing and bus boarding in a terminal while
-demonstrating Java Swing, object-oriented programming, queues, state transitions,
-animation, and CRUD operations.
-
-### 2. Why did you choose Java?
-
-Java provides object-oriented features, collections, timers, and Swing graphics
-in its standard libraries. It is suitable for a self-contained desktop
-simulation.
-
-### 3. Why Swing instead of a website?
-
-The project is a desktop Java application. Swing provides buttons, dialogs,
-tables, timers, and custom painting without requiring a web server or browser
-framework.
-
-### 4. What is the role of SimulationEngine?
-
-It owns the simulation data and business rules. It decides when passengers move,
-buy tickets, board, or return to the platform. It also controls bus state
-changes.
-
-### 5. What is the role of TerminalPanel?
-
-It draws the current state. It does not decide simulation rules.
-
-### 6. Why separate the engine from the panel?
-
-Separating logic and graphics makes the rules easier to test and prevents UI
-code from directly manipulating all queues and seats.
-
-### 7. Why use enums?
-
-Enums restrict states to known values and make state transitions clearer and
-safer than free-form strings.
-
-### 8. Why use LinkedList for queues?
-
-Passengers are normally processed from the front in FIFO order. LinkedList
-supports queue-style addition, first-element access, and removal.
-
-### 9. Why use ArrayList for buses and the master passenger list?
-
-These collections are frequently iterated and do not require constant removal
-from the front, so ArrayList is simple and appropriate.
-
-### 10. How is bus capacity enforced?
-
-Each bus has a fixed 20-position seat array. A passenger only receives an empty
-seat, and `isFull` checks whether all positions are occupied.
-
-### 11. How does priority boarding work?
-
-During loading, the engine first searches for one matching priority passenger and
-reserves a seat directly. A regular passenger enters the boarding line and waits
-for the boarding interval.
-
-### 12. Can a passenger board the wrong destination?
-
-No. The engine compares the passenger and bus destination before selecting the
-passenger.
-
-### 13. What happens if a passenger's destination changes after boarding?
-
-The engine removes the passenger from the old bus and returns them to the
-platform so a correct bus can select them.
-
-### 14. What happens when a bus is manually deleted?
-
-Its seated and waiting passengers are collected, detached from the bus, and
-returned to the platform before the bus is removed.
-
-### 15. What bug existed in the original passenger deletion?
-
-The old code removed the passenger from common queues but could leave them in a
-bus seat or boarding line. The new engine cleans every possible location.
-
-### 16. Why use a Swing Timer instead of Thread.sleep?
-
-`Thread.sleep` on Swing's UI thread would freeze buttons and painting. A Swing
-Timer schedules small update events without blocking the interface.
-
-### 17. What is the Event Dispatch Thread?
-
-It is Swing's main UI thread. Button actions, timer events, and painting happen
-there, which prevents multiple threads from changing the same UI state
-simultaneously.
-
-### 18. Why use System.nanoTime?
-
-It measures elapsed time reliably and is not affected by changes to the
-computer's wall clock.
-
-### 19. What does repaint do?
-
-It requests a future redraw. Swing later calls `paintComponent`; repaint does
-not directly draw immediately.
-
-### 20. Why call super.paintComponent?
-
-It clears and prepares the panel correctly before custom drawing, preventing old
-frames from remaining on the screen.
-
-### 21. How is the pixel art created?
-
-It uses `Graphics2D` methods such as `fillRect`, `fillOval`,
-`drawRoundRect`, colors, fonts, and coordinates. No external sprite files are
-required.
-
-### 22. How do you avoid unlimited growth?
-
-Automatic passengers are capped at 160, departed passengers are removed, buses
-are removed after leaving, and the event log is capped at 500 lines.
-
-### 23. Is the data saved after closing?
-
-No. This version is an in-memory simulation. Database or file persistence would
-be a future feature.
-
-### 24. How did you test the application?
-
-We created regression checks for the cleanup bugs, destination changes, ID
-normalization, capacity, long-running state behavior, and off-screen rendering.
-The source also compiles with Java 8 compatibility.
-
-### 25. Why is the project still more than one thousand lines?
-
-A significant portion is programmatic pixel-art drawing. The remaining code
-separates the UI, models, and rules and includes safety handling. We chose
-readability over compressing multiple operations into hard-to-read one-line
-statements.
-
-### 26. What are the current limitations?
-
-- Only Davao and Tagum routes are supported.
-- There are four fixed bays.
-- Most artwork uses fixed coordinates.
-- Data is not persistent.
-- Traffic and ticket behavior are simplified rather than based on real terminal
-  measurements.
-
-### 27. What would you improve next?
-
-Possible improvements include responsive scaling, configurable routes and bays,
-saved simulation data, adjustable speed, statistics, accessibility options, and
-a packaged executable JAR.
-
-### 28. Is the design thread-safe?
-
-The interactive application keeps engine updates, button actions, and painting
-on Swing's Event Dispatch Thread. It avoids background threads that could mutate
-the collections at the same time.
-
-### 29. What is null used for?
-
-`null` means no object is assigned. For example, a null seat is empty and a
-null `assignedBus` means the passenger is not currently assigned to a bus.
-
-### 30. Why use a deterministic Random in tests?
-
-A fixed seed makes the same random choices repeat across test runs, making
-failures reproducible.
-
-## 10. Questions where you should answer honestly
-
-Do not claim features that the project does not have.
-
-| Question | Honest answer |
-|---|---|
-| Does it use a database? | No, it uses in-memory collections |
-| Does it run on GitHub Pages? | No, Swing is a desktop UI |
-| Is the layout fully responsive? | No, it has a minimum size and some adaptive drawing, but much of the pixel art uses fixed coordinates |
-| Is it a real transport model? | It is an educational simulation with simplified rules |
-| Does every team member need to memorize all code? | No, but everyone should understand the overall flow and their assigned section |
-| Is it strict MVC? | It is MVC-inspired, not a framework-enforced MVC implementation |
-
-Honest technical answers are stronger than pretending.
-
-## 11. Suggested defense presentation
-
-### Part 1: Introduction — 30 seconds
-
-> Our system is a Java Swing bus-terminal simulation. It demonstrates passenger
-> queues, ticket processing, priority boarding, bus capacity, route matching,
-> CRUD operations, animation, and object-oriented design.
-
-### Part 2: Architecture — 1 minute
-
-Show the architecture diagram and explain:
-
-- TerminalSimulation handles controls.
-- SimulationEngine handles rules.
-- TerminalPanel handles drawing.
-- Person and Bus hold model data.
-
-### Part 3: Passenger flow — 1 minute
-
-Explain the passenger-state diagram from ticket queue to bus seat.
-
-### Part 4: Bus flow — 1 minute
-
-Explain the five BusState values and the departure countdown.
-
-### Part 5: Demonstration — 2 minutes
-
-1. Start the application.
-2. Add regular and priority passengers.
-3. Add a bus.
-4. Show ticket and platform movement.
-5. Open the passenger table.
-6. Update a passenger destination.
-7. Delete a passenger or bus and explain safe cleanup.
-8. Pause and resume operations.
-
-### Part 6: Improvements and testing — 1 minute
-
-Explain the original cleanup bugs, fixed timing, capped growth, and regression
-tests.
-
-## 12. Suggested group assignments
-
-If you have four members:
-
-1. **Member 1:** Introduction, Java basics, and architecture.
-2. **Member 2:** Passenger states, ticket queues, and CRUD.
-3. **Member 3:** Bus states, capacity, priority boarding, and timing.
-4. **Member 4:** Swing UI, pixel-art rendering, testing, and improvements.
-
-Every member should still know:
-
-- the project objective;
-- the role of every file;
-- the basic passenger journey;
-- the basic bus journey;
-- one original bug and its fix; and
-- at least five common defense answers.
-
-## 13. Study plan for beginners
-
-### First 20 minutes
-
-Read sections 1–4 and learn the basic Java terms.
-
-### Next 30 minutes
-
-Study the passenger and bus state diagrams. Explain each arrow aloud without
-looking.
-
-### Next 30 minutes
-
-Divide the file-by-file section among members. Each member teaches their section
-to the others.
-
-### Next 20 minutes
-
-Run the application and trace one passenger from creation to departure.
-
-### Final 30 minutes
-
-Ask each other random questions from section 9. Require answers in your own
-words, not memorized sentences.
-
-## 14. Fast cheat sheet
-
-| Item | One-sentence explanation |
-|---|---|
-| `main` | Starts the Swing application on the UI thread |
-| `TerminalSimulation` | Window, buttons, dialogs, timer, and log |
-| `SimulationEngine` | Owns queues, buses, passengers, and rules |
-| `TerminalPanel` | Draws the current engine state |
-| `Person` | Passenger data, movement, and sprite |
-| `Bus` | Bus data, seats, boarding line, and sprite |
-| `PassengerState` | Valid passenger workflow stages |
-| `BusState` | Valid bus lifecycle stages |
-| `SimulationConfig` | Named timing and layout values |
-| `LinkedList` | FIFO ticket and platform queues |
-| `ArrayList` | Active passenger and bus collections |
-| `Person[] seats` | Fixed 20-seat bus capacity |
-| `update` | Advances the entire simulation |
-| `paintComponent` | Draws one visual frame |
-| `repaint` | Requests Swing to draw again |
-| `assignedBus == null` | Passenger currently has no bus |
-
-## 15. Compile, run, and test
-
-### PowerShell
+| Class | A type such as `Person`, `Bus`, or `SimulationEngine` |
+| Object | One created instance, such as passenger P23 |
+| Field | Stored data, such as `destination`, `state`, or `seats` |
+| Method | An action, such as `update`, `reserveSeat`, or `draw` |
+| Constructor | Initializes a new object; it has the class name |
+| Enum | A fixed set of states, such as `PassengerState` |
+| Collection | A structure holding objects, such as a list or array |
+| `final` | The reference/value is not reassigned after initialization |
+| `null` | No object reference; for example, an empty seat |
+| Lambda | A short event action, such as `event -> updateFrame()` |
+| Method reference | Passes an existing method, such as `this::appendLog` |
+| Override | Replaces inherited behavior, such as `paintComponent` |
+
+## 20. Compile, run, and test
+
+From the repository folder in PowerShell:
 
 ```powershell
 New-Item -ItemType Directory -Force out
 $sources = (Get-ChildItem src -Filter *.java).FullName
-javac -encoding UTF-8 -d out $sources
+javac --release 8 -encoding UTF-8 -d out $sources
 java -cp out TerminalSimulation
 ```
 
-### Regression checks
+Compile production code and tests, then run all checks:
 
 ```powershell
 $files = @(
     (Get-ChildItem src -Filter *.java).FullName
     (Get-ChildItem test -Filter *.java).FullName
 )
-javac -encoding UTF-8 -d out $files
+javac --release 8 -encoding UTF-8 -d out $files
 java -ea -cp out SimulationEngineTest
 ```
 
-Expected test output:
+Expected result:
 
 ```text
 SimulationEngineTest: all checks passed
 ```
 
-## Final advice for the defense
+## 21. Final one-page memory sheet
 
-- Understand the flow; do not memorize source lines.
-- When asked “how,” name the method and explain the state change.
-- Use the diagrams to describe sequences.
-- If you do not know an exact detail, explain the responsible class and say you
-  would verify the implementation.
-- Do not claim a database, web deployment, or full responsiveness.
-- Emphasize that the engine-rule separation made the important cleanup bugs
-  testable.
+| If asked about... | Start your answer with... |
+|---|---|
+| Program startup | `main` -> `invokeLater` -> constructor -> `initialize` -> Swing Timer |
+| One update | spawning -> buses -> two ticket lanes -> movement -> repaint |
+| All active people | master `ArrayList<Person> passengers` |
+| Ticket order | front of each `LinkedList` using `peek` and `remove` |
+| Platform selection | first matching type + waiting state + route |
+| Regular boarding | platform -> bus line -> 400 ms interval -> seat |
+| Priority boarding | platform -> direct seat reservation |
+| Capacity | fixed `Person[20]` seat array plus reserved line count |
+| Walking | engine sets target; `Person.stepTowardTarget` moves; engine changes state |
+| Bus lifecycle | arriving -> loading -> closing buffer -> departing -> removed |
+| Passenger deletion | queues + platform + every bus line/seat + master list |
+| Bus deletion | collect unique passengers + clear bus + return them to platform |
+| Destination update | change route; detach and requeue if bus-assigned |
+| Drawing | `paintComponent` reads engine; it does not apply simulation rules |
+| Tests | cleanup, update, IDs, 7,500-step invariants, capacity, headless paint |
+| AI use | assistant used; team verified, tested, traced, and understands code |
+
+The strongest defense answer is not a definition. It is a trace:
+
+> "This method is called, it changes this collection and state, then this method
+> handles the next step."
