@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Run the Java Swing Terminal Simulation in a browser.">
+    <title>Terminal Simulation</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Java Swing + node-based queues</p>
+        <h1>Terminal Simulation</h1>
+      </div>
+      <nav aria-label="Project links">
+        <a href="https://github.com/PixelAlien0/Terminal-Simulation">Source code</a>
+        <a href="https://github.com/PixelAlien0/Terminal-Simulation/blob/main/CODE_BLOCK_WALKTHROUGH.md">Code walkthrough</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="instructions" aria-labelledby="browser-heading">
+        <div>
+          <h2 id="browser-heading">Browser version</h2>
+          <p>
+            This runs the same compiled Java Swing project through CheerpJ. The first
+            launch can take longer because the Java runtime must be downloaded.
+          </p>
+        </div>
+        <div class="actions">
+          <button id="start-button" type="button">Start simulation</button>
+          <button id="fullscreen-button" class="secondary" type="button" disabled>
+            Full screen
+          </button>
+        </div>
+      </section>
+
+      <p id="status" class="status" role="status" aria-live="polite">
+        Ready. Select “Start simulation.”
+      </p>
+
+      <section id="display-shell" class="display-shell" aria-label="Java application display">
+        <div id="display-placeholder">
+          <strong>The simulation will appear here.</strong>
+          <span>An internet connection is required to load the browser Java runtime.</span>
+        </div>
+        <div id="java-display"></div>
+      </section>
+
+      <noscript>
+        <p class="error">JavaScript must be enabled to run this browser version.</p>
+      </noscript>
+    </main>
+
+    <footer>
+      Browser compatibility is provided by
+      <a href="https://cheerpj.com/">CheerpJ</a>. The regular desktop version remains
+      available from the GitHub repository.
+    </footer>
+  </body>
+</html>

@@ -38,7 +38,23 @@ javac -encoding UTF-8 -d out $sources
 java -cp out TerminalSimulation
 ~~~
 
-This is a desktop Swing application, so it does not run through GitHub Pages.
+## Browser version
+
+The same compiled Swing application can also run in a modern browser through
+[CheerpJ](https://cheerpj.com/). Open the published version here:
+
+**[Run Terminal Simulation in the browser](https://pixelalien0.github.io/Terminal-Simulation/)**
+
+Select **Start simulation** and wait while the browser downloads the Java
+runtime. The first launch can take longer. Internet access is required.
+
+The browser page is only a launcher. The simulation, queue, nodes, models, and
+drawing code remain Java. The normal desktop commands above are still the most
+reliable option for the project defense.
+
+GitHub Actions compiles the Java source, runs both regression checks, packages
+`terminal-simulation.jar`, and publishes the `web` directory to GitHub Pages
+whenever `main` is updated.
 
 ## Defense study guide
 
