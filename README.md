@@ -65,6 +65,11 @@ After changing the Java source, rebuild that JAR on PowerShell and commit it:
 
 ## Defense study guide
 
+Start with the **[GitHub Defense Study Guide](Defense/README.md)** for the
+recommended study order, queue traces, program-flow diagrams, class guides,
+practice questions, and test evidence. It works directly on GitHub and does not
+require Obsidian.
+
 See [STUDY_GUIDE.md](STUDY_GUIDE.md) for a code-centered walkthrough of the
 actual runtime flow, collection changes, state transitions, cleanup rules, and
 defense questions.
