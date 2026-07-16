@@ -3,62 +3,146 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Run the Java Swing Terminal Simulation in a browser.">
-    <title>Terminal Simulation</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta
+      name="description"
+      content="Run and study the Java Swing Terminal Simulation in a browser."
+    >
+    <title>Terminal Simulation — Queue Study</title>
+    <link rel="stylesheet" href="styles.css?v=4">
     <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
     <script src="app.js?v=4" defer></script>
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Java Swing + node-based queues</p>
-        <h1>Terminal Simulation</h1>
-      </div>
-      <nav aria-label="Project links">
-        <a href="https://github.com/PixelAlien0/Terminal-Simulation">Source code</a>
-        <a href="https://github.com/PixelAlien0/Terminal-Simulation/blob/main/CODE_BLOCK_WALKTHROUGH.md">Code walkthrough</a>
-      </nav>
-    </header>
+    <div class="site-shell">
+      <header class="masthead">
+        <a class="identity" href="#top" aria-label="Terminal Simulation home">
+          <span class="identity-mark" aria-hidden="true">TS</span>
+          <span class="identity-copy">
+            <strong>Terminal Simulation</strong>
+            <small>Data Structures / Queue</small>
+          </span>
+        </a>
 
-    <main>
-      <section class="instructions" aria-labelledby="browser-heading">
-        <div>
-          <h2 id="browser-heading">Browser version</h2>
+        <nav aria-label="Project links">
+          <a href="https://github.com/PixelAlien0/Terminal-Simulation">
+            <span>01</span> Source
+          </a>
+          <a href="https://github.com/PixelAlien0/Terminal-Simulation/blob/main/CODE_BLOCK_WALKTHROUGH.md">
+            <span>02</span> Walkthrough
+          </a>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero" aria-labelledby="page-title">
+          <div class="hero-index" aria-hidden="true">01</div>
+
+          <div class="hero-copy">
+            <p class="kicker">Java Swing · FIFO · Node-based queue</p>
+            <h1 id="page-title">Terminal<br>Simulation</h1>
+            <p class="hero-summary">
+              Watch passengers move through a working bus terminal while the
+              queue controls who gets served and who boards next.
+            </p>
+          </div>
+
+          <aside class="project-note" aria-label="Project information">
+            <p class="vertical-label" aria-hidden="true">乗車案内</p>
+            <dl>
+              <div>
+                <dt>Subject</dt>
+                <dd>Data Structures &amp; Algorithms</dd>
+              </div>
+              <div>
+                <dt>Assigned structure</dt>
+                <dd>Queue</dd>
+              </div>
+              <div>
+                <dt>Interface</dt>
+                <dd>Java Swing</dd>
+              </div>
+            </dl>
+          </aside>
+        </section>
+
+        <section class="runner" aria-labelledby="runner-title">
+          <header class="runner-header">
+            <div class="runner-heading">
+              <span class="section-number">02</span>
+              <div>
+                <p class="kicker">Interactive build</p>
+                <h2 id="runner-title">Run the terminal</h2>
+              </div>
+            </div>
+
+            <p class="runner-note">
+              The first launch downloads the browser Java runtime. A steady
+              connection is recommended.
+            </p>
+
+            <div class="actions">
+              <button id="start-button" type="button">Start simulation</button>
+              <button id="fullscreen-button" class="secondary" type="button" disabled>
+                Full screen
+              </button>
+            </div>
+          </header>
+
+          <div class="status-line">
+            <span class="status-label">System</span>
+            <p id="status" class="status" role="status" aria-live="polite">
+              Ready. Select “Start simulation.”
+            </p>
+          </div>
+
+          <div class="display-frame">
+            <div class="frame-label" aria-hidden="true">
+              <span>Live / Java 08</span>
+              <span>順番</span>
+            </div>
+
+            <section
+              id="display-shell"
+              class="display-shell"
+              aria-label="Java application display"
+            >
+              <div id="display-placeholder">
+                <span class="placeholder-index" aria-hidden="true">起動</span>
+                <strong>Terminal awaiting departure.</strong>
+                <span>Start the simulation to open the Java Swing window.</span>
+              </div>
+              <div id="java-display"></div>
+            </section>
+          </div>
+
+          <noscript>
+            <p class="error">JavaScript must be enabled to run this browser version.</p>
+          </noscript>
+        </section>
+
+        <section class="study" aria-labelledby="study-title">
+          <span class="section-number">03</span>
+          <div>
+            <p class="kicker">Defense preparation</p>
+            <h2 id="study-title">Read the code. Trace the order.</h2>
+          </div>
           <p>
-            This runs the same compiled Java Swing project through CheerpJ. The first
-            launch can take longer because the Java runtime must be downloaded.
+            Follow each method from enqueue to boarding with the complete,
+            snippet-first guide prepared for your project defense.
           </p>
-        </div>
-        <div class="actions">
-          <button id="start-button" type="button">Start simulation</button>
-          <button id="fullscreen-button" class="secondary" type="button" disabled>
-            Full screen
-          </button>
-        </div>
-      </section>
+          <a class="text-link" href="https://github.com/PixelAlien0/Terminal-Simulation/blob/main/CODE_BLOCK_WALKTHROUGH.md">
+            Open code walkthrough <span aria-hidden="true">↗</span>
+          </a>
+        </section>
+      </main>
 
-      <p id="status" class="status" role="status" aria-live="polite">
-        Ready. Select “Start simulation.”
-      </p>
-
-      <section id="display-shell" class="display-shell" aria-label="Java application display">
-        <div id="display-placeholder">
-          <strong>The simulation will appear here.</strong>
-          <span>An internet connection is required to load the browser Java runtime.</span>
-        </div>
-        <div id="java-display"></div>
-      </section>
-
-      <noscript>
-        <p class="error">JavaScript must be enabled to run this browser version.</p>
-      </noscript>
-    </main>
-
-    <footer>
-      Browser compatibility is provided by
-      <a href="https://cheerpj.com/">CheerpJ</a>. The regular desktop version remains
-      available from the GitHub repository.
-    </footer>
+      <footer>
+        <p>Terminal Simulation / Academic project</p>
+        <p>
+          Browser runtime by <a href="https://cheerpj.com/">CheerpJ</a> ·
+          Desktop Java remains the primary build.
+        </p>
+      </footer>
+    </div>
   </body>
 </html>
