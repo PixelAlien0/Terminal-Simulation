@@ -45,13 +45,20 @@ async function startSimulation() {
     const cheerpjJarPath = `/app${jarUrl.pathname}`;
 
     statusText.textContent = "Starting the Java main class…";
-    await cheerpjRunMain(
+    const javaProcess = cheerpjRunMain(
       "TerminalSimulation",
       cheerpjJarPath
     );
 
     statusText.textContent = "Waiting for the Swing window…";
-    await waitForSwingWindow(120000);
+    const javaStoppedEarly = javaProcess.then(
+      () => Promise.reject(new Error("Java stopped before opening the window.")),
+      (error) => Promise.reject(error)
+    );
+    await Promise.race([
+      waitForSwingWindow(120000),
+      javaStoppedEarly
+    ]);
 
     startButton.textContent = "Simulation running";
     fullscreenButton.disabled = false;
