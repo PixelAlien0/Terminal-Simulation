@@ -7,6 +7,24 @@ const placeholder = document.querySelector("#display-placeholder");
 
 let started = false;
 
+function wait(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function waitForSwingWindow(timeoutMilliseconds) {
+  const deadline = Date.now() + timeoutMilliseconds;
+
+  while (Date.now() < deadline) {
+    const display = document.querySelector("#cheerpjDisplay");
+    if (display && !display.classList.contains("cheerpjLoading")) {
+      return;
+    }
+    await wait(250);
+  }
+
+  throw new Error("The Swing window did not appear before the timeout.");
+}
+
 async function startSimulation() {
   if (started) {
     return;
@@ -23,8 +41,14 @@ async function startSimulation() {
     placeholder.hidden = true;
     cheerpjCreateDisplay(1400, 780, displayParent);
 
-    statusText.textContent = "Starting TerminalSimulation from the compiled JAR…";
-    await cheerpjRunJar("/app/terminal-simulation.jar");
+    statusText.textContent = "Starting the Java main class…";
+    await cheerpjRunMain(
+      "TerminalSimulation",
+      "/app/terminal-simulation.jar"
+    );
+
+    statusText.textContent = "Waiting for the Swing window…";
+    await waitForSwingWindow(120000);
 
     startButton.textContent = "Simulation running";
     fullscreenButton.disabled = false;
