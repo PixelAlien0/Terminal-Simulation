@@ -5,6 +5,10 @@ to help every group member explain how the program starts, how one update works,
 where each passenger is stored, how states change, and how the cleanup rules
 prevent bugs.
 
+All classes and enums are now stored in the single source file
+`src/TerminalSimulation.java`. They remain separate Java types with separate
+responsibilities; only the file organization changed.
+
 Do not memorize every line. For every feature, learn this four-part answer:
 
 1. **Which class receives the action?**
@@ -48,22 +52,23 @@ user or timer -> TerminalSimulation -> SimulationEngine changes data
 
 ## 2. Source map: what calls what
 
-| File | Important methods | Called by | What it changes or returns |
+| Class | Important methods | Called by | What it changes or returns |
 |---|---|---|---|
 | `TerminalSimulation.java` | `main`, constructor, `updateFrame` | Java and Swing | Creates the UI, advances the engine, requests painting |
 | `TerminalSimulation.java` | `createPassenger`, `updatePassenger`, `deletePassenger`, `addBus`, `deleteBus` | Button listeners | Collects user input and calls the engine |
-| `SimulationEngine.java` | `initialize`, `update` | Window constructor and timer | Creates initial data and runs simulation rules |
-| `SimulationEngine.java` | passenger and bus CRUD methods | UI and tests | Mutates passengers, buses, queues, lines, and seats |
-| `SimulationEngine.java` | `updateSpawning`, `updateBuses`, `updateTicketLane`, `movePassengers` | `update` | Advances one fixed simulation step |
-| `PassengerNode.java` | constructor and `next` link | `PassengerQueue` | Stores one passenger in the linked queue chain |
-| `PassengerQueue.java` | `enqueue`, `dequeue`, `peek`, `remove` | Engine, buses, and tests | Implements the assigned node-based FIFO queue |
-| `Person.java` | constructor, `setTarget`, `stepTowardTarget`, `draw` | Engine and panel | Stores, moves, and draws one passenger |
-| `Bus.java` | seat methods and `draw` | Engine and panel | Stores capacity and draws one bus |
-| `TerminalPanel.java` | `paintComponent` and drawing helpers | Swing | Reads engine data and draws one frame |
+| `SimulationEngine` | `initialize`, `update` | Window constructor and timer | Creates initial data and runs simulation rules |
+| `SimulationEngine` | passenger and bus CRUD methods | UI and tests | Mutates passengers, buses, queues, lines, and seats |
+| `SimulationEngine` | `updateSpawning`, `updateBuses`, `updateTicketLane`, `movePassengers` | `update` | Advances one fixed simulation step |
+| `PassengerNode` | constructor and `next` link | `PassengerQueue` | Stores one passenger in the linked queue chain |
+| `PassengerQueue` | `enqueue`, `dequeue`, `peek`, `remove` | Engine, buses, and tests | Implements the assigned node-based FIFO queue |
+| `Person` | constructor, `setTarget`, `stepTowardTarget`, `draw` | Engine and panel | Stores, moves, and draws one passenger |
+| `Bus` | seat methods and `draw` | Engine and panel | Stores capacity and draws one bus |
+| `TerminalPanel` | `paintComponent` and drawing helpers | Swing | Reads engine data and draws one frame |
 | `PassengerQueueTest.java` | four queue tests | Test `main` and engine tests | Checks node links, FIFO, removal, reuse, and null rejection |
 | `SimulationEngineTest.java` | six engine/panel tests | Test `main` | Checks cleanup, IDs, long runs, capacity, and painting |
 
-The smaller Java files are separate **classes** and **enums**, not methods.
+The labeled sections in the source file are separate **classes** and **enums**,
+not methods.
 Methods are the named actions inside those classes, such as `update`,
 `removePassenger`, and `draw`.
 

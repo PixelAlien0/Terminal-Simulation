@@ -1,8 +1,11 @@
 # Terminal Simulation: Code Block Walkthrough
 
-This walkthrough is for the current multi-file GitHub version. It shows a real
+This walkthrough is for the current single-file GitHub version. It shows a real
 piece of source code, then explains what that piece does, what calls it, and what
 changes afterward.
+
+All class sections are stored in `src/TerminalSimulation.java`. Headings such as
+`PassengerQueue` and `SimulationEngine` name classes, not separate source files.
 
 For long pixel-art or Swing-construction methods, the walkthrough shows the
 important executable lines and groups repetitive drawing/setup statements under
@@ -26,9 +29,9 @@ TerminalSimulation.main
     -> repaint asks TerminalPanel.paintComponent to draw the new state
 ```
 
-The files have separate jobs:
+The classes have separate jobs:
 
-| File | Main job |
+| Class | Main job |
 |---|---|
 | `PassengerNode` | One queue node: passenger data plus `next` link |
 | `PassengerQueue` | Front/rear node management and FIFO operations |
@@ -40,7 +43,7 @@ The files have separate jobs:
 | `TerminalPanel` | Drawing only |
 | `TerminalSimulation` | Window, timer, controls, dialogs, and log |
 
-## 2. `PassengerNode.java`
+## 2. `PassengerNode`
 
 ### Entire node class
 
@@ -71,7 +74,7 @@ This is a real DSA node because it stores both data and a link:
 [P1 | next] -> [P2 | next] -> [P3 | null]
 ```
 
-## 3. `PassengerQueue.java`
+## 3. `PassengerQueue`
 
 ### Queue fields
 
@@ -266,7 +269,7 @@ What these blocks do:
 
 ## 4. State enums
 
-### `PassengerState.java`: passenger states
+### `PassengerState`: passenger states
 
 ```java
 enum PassengerState {
@@ -284,7 +287,7 @@ What this block does:
 - Lets the engine use a switch to react to arrival.
 - These are states, not queue nodes.
 
-### `BusState.java`: bus states
+### `BusState`: bus states
 
 ```java
 enum BusState {
@@ -295,7 +298,7 @@ enum BusState {
 This restricts buses to their five lifecycle stages. Because this is a separate
 enum, Java will not let a passenger receive a bus state.
 
-## 5. `Person.java`
+## 5. `Person`
 
 ### Passenger fields
 
@@ -422,7 +425,7 @@ sprite. The drawing sections are:
 
 Drawing reads passenger state; it does not change queue order.
 
-## 6. `Bus.java`
+## 6. `Bus`
 
 ### Bus fields
 
@@ -554,7 +557,7 @@ The first guard hides a departed bus. Tagum is green and Davao is blue. The
 remaining pixel-art sections draw the vehicle and show `[passengers/capacity]`.
 The countdown appears only while loading after somebody is seated.
 
-## 7. `SimulationConfig.java`
+## 7. `SimulationConfig`
 
 ### All configuration groups
 
@@ -599,7 +602,7 @@ private SimulationConfig() {
 
 The class contains only static constants, so nobody should create an instance.
 
-## 8. `SimulationEngine.java`
+## 8. `SimulationEngine`
 
 This is the rules class. It owns the live passengers, platform, buses, and two
 ticket queues.
@@ -1461,7 +1464,7 @@ private void log(String message) {
 These helpers standardize the two routes, clean IDs, and forward messages to
 the logger supplied by the window.
 
-## 9. `TerminalPanel.java`
+## 9. `TerminalPanel`
 
 This class is the view. It reads the engine and draws; it does not enqueue,
 dequeue, assign seats, or change workflow states.

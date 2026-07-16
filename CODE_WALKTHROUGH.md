@@ -1,8 +1,12 @@
 # Terminal Simulation Complete Code Walkthrough
 
-This document explains every Java file and every meaningful section of code in
+This document explains every class and every meaningful section of code in
 the project. It is written for group members who are still learning Java and
 need to explain how the current program works during the defense.
+
+The current version keeps every class in one file: `src/TerminalSimulation.java`.
+The class responsibilities described below are unchanged; only their physical
+file location changed.
 
 For a version that shows each source snippet before explaining it, see
 [CODE_BLOCK_WALKTHROUGH.md](CODE_BLOCK_WALKTHROUGH.md).
@@ -16,20 +20,20 @@ linked passenger nodes**. Other structures only support the simulation:
 - `Person[]` represents the fixed 20 seats of a bus.
 - Enums represent states; they are not data structures.
 
-## 1. Project files and responsibilities
+## 1. Class sections and responsibilities
 
-| File | Responsibility |
+| Class section in `src/TerminalSimulation.java` | Responsibility |
 |---|---|
-| `src/PassengerNode.java` | One linked node containing a passenger and the next-node link |
-| `src/PassengerQueue.java` | Custom node-based FIFO queue operations |
-| `src/PassengerState.java` | Valid passenger workflow states |
-| `src/BusState.java` | Valid bus lifecycle states |
-| `src/Person.java` | Passenger data, movement, and pixel-art drawing |
-| `src/Bus.java` | Bus data, fixed seats, FIFO boarding queue, and drawing |
-| `src/SimulationConfig.java` | Named timing, capacity, window, and layout constants |
-| `src/SimulationEngine.java` | All terminal rules and live simulation collections |
-| `src/TerminalPanel.java` | Pixel-art view of the current engine state |
-| `src/TerminalSimulation.java` | Swing window, controls, dialogs, timer, and log |
+| `PassengerNode` | One linked node containing a passenger and the next-node link |
+| `PassengerQueue` | Custom node-based FIFO queue operations |
+| `PassengerState` | Valid passenger workflow states |
+| `BusState` | Valid bus lifecycle states |
+| `Person` | Passenger data, movement, and pixel-art drawing |
+| `Bus` | Bus data, fixed seats, FIFO boarding queue, and drawing |
+| `SimulationConfig` | Named timing, capacity, window, and layout constants |
+| `SimulationEngine` | All terminal rules and live simulation collections |
+| `TerminalPanel` | Pixel-art view of the current engine state |
+| `TerminalSimulation` | Swing window, controls, dialogs, timer, and log |
 | `test/PassengerQueueTest.java` | Direct tests of node links and queue behavior |
 | `test/SimulationEngineTest.java` | Integration, cleanup, long-run, and rendering tests |
 
@@ -53,7 +57,7 @@ belong to the engine.
 
 ## 2. The custom queue and node
 
-### `PassengerNode.java`
+### `PassengerNode`
 
 This is the physical link used to build the queue:
 
@@ -103,7 +107,7 @@ front
 This is a real DSA node because it stores data and a link. It is different from
 a state enum, which only identifies what an object is currently doing.
 
-### `PassengerQueue.java`
+### `PassengerQueue`
 
 This class controls the nodes. Other classes request queue operations instead of
 manually reconnecting nodes.
@@ -219,7 +223,7 @@ coordinate. It does not remove or reorder the queue.
 
 ## 3. State enum files
 
-### `PassengerState.java`
+### `PassengerState`
 
 This enum lists the only allowed passenger states:
 
@@ -238,7 +242,7 @@ This enum lists the only allowed passenger states:
 An enum prevents invalid text and spelling mistakes. It is not a node and does
 not replace the queue.
 
-### `BusState.java`
+### `BusState`
 
 | State | Meaning |
 |---|---|
@@ -251,7 +255,7 @@ not replace the queue.
 Because `PassengerState` and `BusState` are different enum types, Java prevents
 a passenger from accidentally receiving a bus state.
 
-## 4. `Person.java`
+## 4. `Person`
 
 `Person` is both the passenger model and the passenger sprite.
 
@@ -324,7 +328,7 @@ The drawing method is organized into visual layers:
 These drawing statements create pixel art. They do not change queue order or
 simulation rules.
 
-## 5. `Bus.java`
+## 5. `Bus`
 
 `Bus` stores one bus's route, location, lifecycle, seats, and boarding queue.
 
@@ -401,7 +405,7 @@ the bus moves, the same calculation gives the seat's new screen coordinate.
 The private bus width/height constants are drawing measurements, not terminal
 capacity.
 
-## 6. `SimulationConfig.java`
+## 6. `SimulationConfig`
 
 This class contains only named constants. Its constructor is private so nobody
 creates a useless `SimulationConfig` object.
@@ -435,7 +439,7 @@ creates a useless `SimulationConfig` object.
 Named constants make the rules readable and prevent repeated unexplained
 numbers.
 
-## 7. `SimulationEngine.java`
+## 7. `SimulationEngine`
 
 This is the rules layer. It owns all live simulation data and is the largest
 logic file.
@@ -799,7 +803,7 @@ Returns null for null/blank input; otherwise returns trimmed text.
 
 Passes the message to the injected `Consumer<String>`.
 
-## 8. `TerminalPanel.java`
+## 8. `TerminalPanel`
 
 `TerminalPanel extends JPanel`, which lets Swing place it in the frame and call
 its painting method.
