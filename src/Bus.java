@@ -3,8 +3,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Point;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 final class Bus {
@@ -20,7 +18,7 @@ final class Bus {
     int departureBufferMs = SimulationConfig.BUS_DEPARTURE_BUFFER_MS;
     boolean countdownStarted;
     final Person[] seats = new Person[capacity];
-    final List<Person> boardingLine = new ArrayList<Person>();
+    final PassengerQueue boardingLine = new PassengerQueue();
     int boardingElapsedMs;
 
     private static final int BUS_WIDTH = 180;

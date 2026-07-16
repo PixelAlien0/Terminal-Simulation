@@ -6,6 +6,7 @@ boarding, and manages buses across four terminal bays.
 
 ## Features
 
+- Custom node-based FIFO queue implementation
 - Regular and priority passenger queues
 - Ticket-booth controls
 - Animated passenger movement
@@ -45,11 +46,16 @@ See [STUDY_GUIDE.md](STUDY_GUIDE.md) for a code-centered walkthrough of the
 actual runtime flow, collection changes, state transitions, cleanup rules, and
 defense questions.
 
+See [CODE_WALKTHROUGH.md](CODE_WALKTHROUGH.md) for a complete beginner-friendly
+explanation of every Java file, class, field group, method, drawing section,
+queue operation, runtime trace, and test.
+
 ## Project structure
 
 - TerminalSimulation builds the Swing window and handles user input.
 - TerminalPanel renders the pixel-art terminal.
 - SimulationEngine owns simulation state and transitions.
+- PassengerNode and PassengerQueue implement the assigned node-based FIFO queue.
 - Person and Bus are the simulation models.
 - SimulationConfig contains timing and layout constants.
 
@@ -58,5 +64,6 @@ defense questions.
 ~~~bash
 rm -rf out && mkdir out
 javac -encoding UTF-8 -d out src/*.java test/*.java
+java -ea -cp out PassengerQueueTest
 java -ea -cp out SimulationEngineTest
 ~~~

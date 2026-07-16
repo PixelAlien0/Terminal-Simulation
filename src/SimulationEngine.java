@@ -3,16 +3,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.function.Consumer;
 
 final class SimulationEngine {
     private static final class TicketLane {
-        final LinkedList<Person> queue = new LinkedList<Person>();
+        final PassengerQueue queue = new PassengerQueue();
         final int y;
         final int rowDirection;
         int delayMs;
@@ -28,7 +25,7 @@ final class SimulationEngine {
     private final TicketLane regularLane =
             new TicketLane(SimulationConfig.REGULAR_QUEUE_Y, 1);
     private final TicketLane[] ticketLanes = {priorityLane, regularLane};
-    private final LinkedList<Person> platform = new LinkedList<Person>();
+    private final List<Person> platform = new ArrayList<Person>();
     private final List<Person> passengers = new ArrayList<Person>();
     private final List<Bus> buses = new ArrayList<Bus>();
     private final Random random;
@@ -71,7 +68,7 @@ final class SimulationEngine {
                 priority,
                 passengerCounter
         );
-        lane(priority).queue.add(passenger);
+        lane(priority).queue.enqueue(passenger);
         passengers.add(passenger);
         positionTicketQueues();
         return passenger;
@@ -326,7 +323,7 @@ final class SimulationEngine {
             if (regular != null) {
                 regular.state = PassengerState.MOVING_TO_BAY_LINE;
                 regular.assignedBus = bus;
-                bus.boardingLine.add(regular);
+                bus.boardingLine.enqueue(regular);
                 positionBoardingLine(bus);
             }
         }
@@ -334,7 +331,7 @@ final class SimulationEngine {
         if (!bus.boardingLine.isEmpty() && !bus.isFull()) {
             bus.boardingElapsedMs += elapsedMs;
             if (bus.boardingElapsedMs >= SimulationConfig.BOARDING_INTERVAL_MS) {
-                reserveSeat(bus, bus.boardingLine.remove(0));
+                reserveSeat(bus, bus.boardingLine.dequeue());
                 positionBoardingLine(bus);
                 bus.boardingElapsedMs = 0;
             }
@@ -352,10 +349,8 @@ final class SimulationEngine {
         }
 
         if (bus.isFull() || bus.countdownStarted && bus.countdownMs == 0) {
-            List<Person> waiting = new ArrayList<Person>(bus.boardingLine);
-            bus.boardingLine.clear();
-            for (Person passenger : waiting) {
-                sendToPlatform(passenger);
+            while (!bus.boardingLine.isEmpty()) {
+                sendToPlatform(bus.boardingLine.dequeue());
             }
             bus.state = BusState.WAITING_FOR_DEPARTURE;
             log("[BUS] " + bus.busId + " closed doors. Preparing to depart.");
@@ -444,7 +439,7 @@ final class SimulationEngine {
         if (passenger.state == PassengerState.BUYING_TICKET) {
             passenger.ticketTimerMs = Math.max(0, passenger.ticketTimerMs - elapsedMs);
             if (passenger.ticketTimerMs == 0) {
-                ticketLane.queue.remove();
+                ticketLane.queue.dequeue();
                 sendToPlatform(passenger);
                 positionTicketQueues();
                 ticketLane.delayMs = SimulationConfig.TICKET_TRANSACTION_DELAY_MS;
@@ -501,13 +496,18 @@ final class SimulationEngine {
     }
 
     private void returnBusPassengers(Bus bus) {
-        Set<Person> returning = new LinkedHashSet<Person>(bus.boardingLine);
-        for (Person passenger : bus.seats) {
-            if (passenger != null) {
+        List<Person> returning = new ArrayList<Person>();
+        while (!bus.boardingLine.isEmpty()) {
+            Person passenger = bus.boardingLine.dequeue();
+            if (!returning.contains(passenger)) {
                 returning.add(passenger);
             }
         }
-        bus.boardingLine.clear();
+        for (Person passenger : bus.seats) {
+            if (passenger != null && !returning.contains(passenger)) {
+                returning.add(passenger);
+            }
+        }
         Arrays.fill(bus.seats, null);
         for (Person passenger : returning) {
             if (passengers.contains(passenger)) {
@@ -529,7 +529,9 @@ final class SimulationEngine {
     private void positionTicketQueues() {
         for (TicketLane ticketLane : ticketLanes) {
             int index = 0;
-            for (Person passenger : ticketLane.queue) {
+            PassengerNode current = ticketLane.queue.frontNode();
+            while (current != null) {
+                Person passenger = current.passenger;
                 int column = index % 7;
                 int row = index / 7;
                 passenger.setTarget(
@@ -538,6 +540,7 @@ final class SimulationEngine {
                         ticketLane.y + ticketLane.rowDirection * row * 18
                 );
                 index++;
+                current = current.next;
             }
         }
     }
@@ -554,8 +557,12 @@ final class SimulationEngine {
     }
 
     private void positionBoardingLine(Bus bus) {
-        for (int index = 0; index < bus.boardingLine.size(); index++) {
-            bus.boardingLine.get(index).setTarget(bus.x - 30 - index * 18, bus.y + 45);
+        int index = 0;
+        PassengerNode current = bus.boardingLine.frontNode();
+        while (current != null) {
+            current.passenger.setTarget(bus.x - 30 - index * 18, bus.y + 45);
+            current = current.next;
+            index++;
         }
     }
 

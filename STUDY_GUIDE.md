@@ -55,10 +55,13 @@ user or timer -> TerminalSimulation -> SimulationEngine changes data
 | `SimulationEngine.java` | `initialize`, `update` | Window constructor and timer | Creates initial data and runs simulation rules |
 | `SimulationEngine.java` | passenger and bus CRUD methods | UI and tests | Mutates passengers, buses, queues, lines, and seats |
 | `SimulationEngine.java` | `updateSpawning`, `updateBuses`, `updateTicketLane`, `movePassengers` | `update` | Advances one fixed simulation step |
+| `PassengerNode.java` | constructor and `next` link | `PassengerQueue` | Stores one passenger in the linked queue chain |
+| `PassengerQueue.java` | `enqueue`, `dequeue`, `peek`, `remove` | Engine, buses, and tests | Implements the assigned node-based FIFO queue |
 | `Person.java` | constructor, `setTarget`, `stepTowardTarget`, `draw` | Engine and panel | Stores, moves, and draws one passenger |
 | `Bus.java` | seat methods and `draw` | Engine and panel | Stores capacity and draws one bus |
 | `TerminalPanel.java` | `paintComponent` and drawing helpers | Swing | Reads engine data and draws one frame |
-| `SimulationEngineTest.java` | six test methods | Test `main` | Checks cleanup, IDs, long runs, capacity, and painting |
+| `PassengerQueueTest.java` | four queue tests | Test `main` and engine tests | Checks node links, FIFO, removal, reuse, and null rejection |
+| `SimulationEngineTest.java` | six engine/panel tests | Test `main` | Checks cleanup, IDs, long runs, capacity, and painting |
 
 The smaller Java files are separate **classes** and **enums**, not methods.
 Methods are the named actions inside those classes, such as `update`,
@@ -146,20 +149,24 @@ the drawing code immediately.
 
 ## 5. Where the live data is stored
 
-`SimulationEngine` owns five important working collections:
+`SimulationEngine` owns the important working collections below:
 
 | Data structure | Field | Contents | Why it fits |
 |---|---|---|---|
-| `LinkedList<Person>` | `priorityLane.queue` | Priority ticket line | The front passenger is served first |
-| `LinkedList<Person>` | `regularLane.queue` | Regular ticket line | The front passenger is served first |
-| `LinkedList<Person>` | `platform` | Ticketed passengers waiting or walking to the platform | It preserves arrival order |
+| Custom `PassengerQueue` | `priorityLane.queue` | Priority ticket line | Node-based FIFO with front and rear |
+| Custom `PassengerQueue` | `regularLane.queue` | Regular ticket line | Node-based FIFO with front and rear |
+| `ArrayList<Person>` | `platform` | Ticketed passengers waiting or walking to the platform | Buses filter by route, type, and state, so this is not strict FIFO |
 | `ArrayList<Person>` | `passengers` | Master list of all active passengers | Easy to iterate, search, list, move, and draw |
 | `ArrayList<Bus>` | `buses` | All active buses | Small list that is repeatedly iterated |
 
 Each `Bus` also owns:
 
 - `Person[] seats`: a fixed array of 20 seat positions;
-- `ArrayList<Person> boardingLine`: regular passengers waiting beside that bus.
+- `PassengerQueue boardingLine`: node-based FIFO line for regular passengers.
+
+`PassengerNode` stores one `Person` and a `next` link. `PassengerQueue` stores
+the `front`, `rear`, and `size`, so enqueue and dequeue are O(1). The complete
+line-by-line explanation is in [CODE_WALKTHROUGH.md](CODE_WALKTHROUGH.md).
 
 ### The most important invariant
 
@@ -219,7 +226,8 @@ For a manually created regular passenger going to Davao:
    `Tagum`; any unsupported route throws `IllegalArgumentException`.
 6. The `Person` constructor starts the passenger at x = 10, around y = 350, in
    `WALKING_TO_TICKET`.
-7. The engine adds the object to `regularLane.queue` and `passengers`.
+7. The engine enqueues the object at the rear of `regularLane.queue` and adds it
+   to `passengers`.
 8. `positionTicketQueues` assigns target coordinates to everyone in both
    ticket queues.
 
@@ -244,7 +252,7 @@ Once the front person is at the booth, the engine changes their state to
 `BUYING_TICKET` and sets `ticketTimerMs` to 320 ms. Each fixed update subtracts
 16 ms. When it reaches zero:
 
-1. `ticketLane.queue.remove()` removes the front person;
+1. `ticketLane.queue.dequeue()` removes the front person;
 2. `sendToPlatform` adds them to the platform list;
 3. their state becomes `WALKING_TO_PLATFORM`;
 4. platform and ticket targets are recalculated; and
@@ -256,7 +264,7 @@ simulation period.
 
 ### C. Platform waiting
 
-`sendToPlatform` first removes the passenger from ticket and platform queues to
+`sendToPlatform` first removes the passenger from ticket queues and the platform list to
 avoid duplicates. It then adds the passenger to `platform` if needed, clears
 `assignedBus`, changes the state to `WALKING_TO_PLATFORM`, and calls
 `positionPlatform`.
@@ -284,12 +292,12 @@ The selected regular passenger:
 
 - gets state `MOVING_TO_BAY_LINE`;
 - gets `assignedBus = bus`;
-- is added to `bus.boardingLine`;
+- is enqueued at the rear of `bus.boardingLine`;
 - receives a line target from `positionBoardingLine`.
 
 At the target, `movePassengers` changes the state to
-`WAITING_IN_BAY_LINE`. Every 400 ms, the first regular passenger is removed
-from the line and passed to `reserveSeat`.
+`WAITING_IN_BAY_LINE`. Every 400 ms, the front regular passenger is dequeued and
+passed to `reserveSeat`.
 
 ### E. Seat reservation and departure
 
@@ -464,13 +472,13 @@ list would leave a ghost passenger inside a bus.
 `removeBus` removes the bus from the active bus list and calls
 `returnBusPassengers`. That method:
 
-1. copies boarding-line passengers into a `LinkedHashSet`;
-2. adds every non-null seat passenger to the same set;
-3. clears the line and fills the seat array with null;
+1. dequeues boarding-line passengers into a temporary return list;
+2. adds every non-null seat passenger not already in that list;
+3. fills the seat array with null;
 4. sends every still-active passenger back to the platform.
 
-The set prevents the same passenger from being returned twice if inconsistent
-data ever placed the reference in more than one bus location.
+The temporary list prevents the same passenger from being returned twice while
+keeping the production project focused on its assigned Queue structure.
 
 ### Closing the ticket booth
 
@@ -489,10 +497,10 @@ added or removed?"
 
 | Method | Adds to | Removes/clears from | Other important changes |
 |---|---|---|---|
-| `createPassenger` | one ticket queue, `passengers` | nothing | assigns unique ID and route |
+| `createPassenger` | enqueue into one ticket queue, add to `passengers` | nothing | assigns unique ID and route |
 | `sendToPlatform` | `platform` if absent | both ticket queues and old platform entry | clears bus; state becomes `WALKING_TO_PLATFORM` |
 | `takePlatformPassenger` | nothing | `platform` through `Iterator.remove` | returns first matching passenger |
-| `loadBus` regular path | `bus.boardingLine` | platform through helper | assigns bus and line state |
+| `loadBus` regular path | enqueue into `bus.boardingLine` | platform through helper; later dequeue front | assigns bus and line state |
 | `reserveSeat` | one `bus.seats` index | nothing directly | assigns bus, seat target, walking state |
 | `removePassenger` | nothing | queues, platform, bus lines, seats, master list | clears assignment |
 | `updatePassengerDestination` | platform only if previously assigned | old bus line/seat if assigned | changes destination |
@@ -545,15 +553,16 @@ on every paint.
 
 | Concept | Where used | What the code demonstrates |
 |---|---|---|
-| FIFO queue | Both `TicketLane.queue` lists | `peek` reads the front and `remove` serves the front |
-| Ordered waiting list | `platform` | Scans from the front for the first matching route and type |
-| Dynamic array list | `passengers`, `buses`, `boardingLine` | Stores a changing number of objects and supports iteration |
+| Linked node | `PassengerNode` | Stores one passenger and the next-node reference |
+| FIFO queue | Both ticket queues and every bus boarding line | `enqueue` at rear, `peek` at front, `dequeue` from front |
+| Filtered waiting list | `platform` | Scans for the first matching route, type, and waiting state; not claimed as strict FIFO |
+| Dynamic array list | `platform`, `passengers`, `buses` | Stores objects that need iteration, search, or filtered selection |
 | Fixed array | `Bus.seats` | Exactly 20 indexed seats; null means empty |
 | Linear search | `findPassenger`, `findBus`, `takePlatformPassenger` | Checks objects until a match is found |
 | State machine | `PassengerState`, `BusState`, switch statements | Behavior depends on a limited current state |
 | Circular scan | `getRandomEmptySeat` | Starts randomly and wraps with modulo |
 | Safe removal during iteration | Platform and departed-bus iterators | Uses `Iterator.remove` instead of modifying the list directly |
-| De-duplication | `LinkedHashSet` in `returnBusPassengers` | Returns each passenger once while preserving encounter order |
+| De-duplication | Temporary list in `returnBusPassengers` | Avoids returning the same reference twice during cleanup |
 | Sorting | Y-sort in `paintComponent` | Painter's-order visual depth |
 | Fixed time step | `updateFrame` accumulator | Runs logic in consistent 16 ms units |
 
@@ -561,6 +570,8 @@ on every paint.
 
 Let `n` be the active passenger count and `b` the active bus count.
 
+- custom queue `enqueue`, `dequeue`, `peek`, `isEmpty`, and `size`: O(1).
+- custom queue CRUD `remove` and `contains`: O(q), where q is queue length.
 - `findPassenger`: O(n) linear search.
 - `findBus` and `isBayFree`: O(b). Here b is at most four.
 - `takePlatformPassenger`: O(n) in the worst case.
@@ -577,11 +588,16 @@ providing a meaningful benefit at this scale.
 
 ## 14. What the tests prove
 
-`SimulationEngineTest` is a plain Java test runner. Its `main` calls six checks
-and throws `AssertionError` when a condition is false.
+`PassengerQueueTest` directly checks the assigned DSA. `SimulationEngineTest`
+runs those queue checks first, then six engine/panel checks. Both runners throw
+`AssertionError` when a condition is false.
 
 | Test | Setup and assertion | Bug or rule protected |
 |---|---|---|
+| `queueUsesLinkedNodesAndFifoOrder` | Checks P1 -> P2 -> P3 links and dequeue order | Real node chain and FIFO behavior |
+| `removalRepairsFrontMiddleAndRearLinks` | Removes requested passengers from different positions | CRUD cleanup preserves links/front/rear |
+| `emptyQueueCanBeReused` | Empties and enqueues again | Front and rear reset correctly |
+| `nullPassengerIsRejected` | Attempts `enqueue(null)` | Every node contains a valid passenger |
 | `deletingPassengerClearsSeatAndWorkingList` | Seats a person, deletes them, checks master list and seat | No ghost passenger after delete |
 | `deletingBusReturnsPassengerToPlatform` | Seats a person, deletes bus, checks state, assignment, platform | No stranded passenger after bus delete |
 | `updatingAssignedPassengerRequeuesForNewDestination` | Seats Davao passenger, changes to Tagum | No old-route bus reference |
@@ -672,13 +688,14 @@ then switches the passenger state, such as `WALKING_TO_PLATFORM` to
 
 #### 13. Who is served first in a ticket line?
 
-`updateTicketLane` uses `queue.peek()` and later `queue.remove()`, so the front
+`updateTicketLane` uses `queue.peek()` and later `queue.dequeue()`, so the front
 passenger is served first: FIFO.
 
 #### 14. Is priority service a Java `PriorityQueue`?
 
-No. The program has two FIFO `LinkedList` ticket lanes. Priority boarding is a
-rule in `loadBus` that checks priority passengers first and skips their bay line.
+No. The program has two custom node-based FIFO ticket queues. Priority boarding
+is a rule in `loadBus` that checks priority passengers first and skips their bus
+boarding queue.
 
 #### 15. Can both ticket lines serve someone at the same time?
 
@@ -698,8 +715,8 @@ destination.
 #### 18. How does a regular passenger enter a bus?
 
 `loadBus` removes the first matching regular person from the platform, assigns
-the bus, adds them to `boardingLine`, waits for the boarding interval, then calls
-`reserveSeat` for the front of the line.
+the bus, enqueues them at the rear of `boardingLine`, waits for the boarding
+interval, then dequeues the front and calls `reserveSeat`.
 
 #### 19. How does a priority passenger enter a bus?
 
@@ -740,8 +757,8 @@ changes from `LOADING` to `WAITING_FOR_DEPARTURE`.
 
 #### 26. What happens to regular passengers still in line when doors close?
 
-The line is copied and cleared, then each waiting passenger is sent back to the
-platform.
+The engine repeatedly dequeues the front until the boarding queue is empty,
+sending each waiting passenger back to the platform.
 
 #### 27. Why are seats an array instead of another unlimited list?
 
@@ -796,10 +813,10 @@ passenger and an incorrect capacity count.
 They are not assigned to a bus, so only the destination changes. They continue
 through the same ticket line and later wait for the new route.
 
-#### 37. Why does deleting a bus use `LinkedHashSet`?
+#### 37. How does deleting a bus avoid returning the same passenger twice?
 
-It de-duplicates passenger references while preserving encounter order before
-the passengers are returned to the platform.
+It dequeues boarding passengers into a temporary `ArrayList` and adds a seat
+passenger only when that exact reference is not already in the list.
 
 #### 38. Why does `takePlatformPassenger` use an iterator?
 
@@ -879,6 +896,61 @@ automatically mean a more complicated execution path.
 
 Only two routes and four bays are modeled; layout coordinates are mostly fixed;
 data is not persistent; and terminal behavior is simplified for education.
+
+### Queue and node implementation
+
+#### 53. What makes `PassengerNode` a real node?
+
+It stores one `Person` reference as its data and one `PassengerNode next`
+reference as its link to the following queue element.
+
+#### 54. What do `front` and `rear` mean?
+
+`front` points to the next passenger who will be dequeued. `rear` points to the
+most recently enqueued node. Both are null when the queue is empty.
+
+#### 55. How does `enqueue` work?
+
+It creates a new node. In an empty queue, both front and rear become that node.
+Otherwise, the old rear's `next` points to the new node and rear moves forward.
+
+#### 56. How does `dequeue` work?
+
+It saves the front passenger, advances front to `front.next`, reduces size, and
+returns the saved passenger. If the last node left, it also resets rear to null.
+
+#### 57. Why are enqueue and dequeue O(1)?
+
+The queue directly stores both ends, so neither operation needs to traverse the
+node chain.
+
+#### 58. Why does the custom queue also have an O(n) `remove` method?
+
+Normal service is FIFO, but CRUD deletion may target a passenger in the middle.
+The method must traverse nodes and repair the front, middle, or rear link.
+
+#### 59. Where is the custom queue used?
+
+It implements the regular and priority ticket lines and every bus's regular
+boarding line. These processes add at the rear and serve from the front.
+
+#### 60. Why is the platform an `ArrayList` instead of the assigned queue?
+
+Buses filter the platform by destination, priority type, and waiting state,
+which can skip unmatched people. That collection is therefore not one strict
+global FIFO service line.
+
+#### 61. Why keep enums after adding nodes?
+
+Nodes control passenger order. Enums restrict valid passenger and bus states.
+They solve different problems, and Java keeps their types separate.
+
+#### 62. How is this different from the group assigned a singly linked list?
+
+Both can use one-way node links internally, but our public behavior is the Queue
+ADT: enqueue at rear, peek/dequeue at front, and FIFO service. A linked-list
+assignment normally focuses on general insertion, deletion, and traversal at
+arbitrary positions.
 
 ## 16. Trace drills: predict what happens next
 
@@ -970,6 +1042,8 @@ method, data change, state transition, and next result.
 | Method | An action, such as `update`, `reserveSeat`, or `draw` |
 | Constructor | Initializes a new object; it has the class name |
 | Enum | A fixed set of states, such as `PassengerState` |
+| Node | One linked element containing a passenger and a `next` reference |
+| Queue | FIFO structure with enqueue at rear and dequeue at front |
 | Collection | A structure holding objects, such as a list or array |
 | `final` | The reference/value is not reassigned after initialization |
 | `null` | No object reference; for example, an empty seat |
@@ -996,12 +1070,14 @@ $files = @(
     (Get-ChildItem test -Filter *.java).FullName
 )
 javac --release 8 -encoding UTF-8 -d out $files
+java -ea -cp out PassengerQueueTest
 java -ea -cp out SimulationEngineTest
 ```
 
 Expected result:
 
 ```text
+PassengerQueueTest: all checks passed
 SimulationEngineTest: all checks passed
 ```
 
@@ -1012,9 +1088,10 @@ SimulationEngineTest: all checks passed
 | Program startup | `main` -> `invokeLater` -> constructor -> `initialize` -> Swing Timer |
 | One update | spawning -> buses -> two ticket lanes -> movement -> repaint |
 | All active people | master `ArrayList<Person> passengers` |
-| Ticket order | front of each `LinkedList` using `peek` and `remove` |
+| Queue structure | `PassengerNode` data + `next`; `PassengerQueue` front + rear + size |
+| Ticket order | node-based FIFO using `enqueue`, `peek`, and `dequeue` |
 | Platform selection | first matching type + waiting state + route |
-| Regular boarding | platform -> bus line -> 400 ms interval -> seat |
+| Regular boarding | platform -> enqueue bus line -> 400 ms -> dequeue front -> seat |
 | Priority boarding | platform -> direct seat reservation |
 | Capacity | fixed `Person[20]` seat array plus reserved line count |
 | Walking | engine sets target; `Person.stepTowardTarget` moves; engine changes state |
@@ -1023,7 +1100,7 @@ SimulationEngineTest: all checks passed
 | Bus deletion | collect unique passengers + clear bus + return them to platform |
 | Destination update | change route; detach and requeue if bus-assigned |
 | Drawing | `paintComponent` reads engine; it does not apply simulation rules |
-| Tests | cleanup, update, IDs, 7,500-step invariants, capacity, headless paint |
+| Tests | node links, FIFO, queue removal/reuse, cleanup, IDs, 7,500-step invariants, capacity, headless paint |
 | AI use | assistant used; team verified, tested, traced, and understands code |
 
 The strongest defense answer is not a definition. It is a trace:

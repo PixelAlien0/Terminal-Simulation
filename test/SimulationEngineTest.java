@@ -7,6 +7,7 @@ import java.util.function.BooleanSupplier;
 
 public final class SimulationEngineTest {
     public static void main(String[] args) {
+        PassengerQueueTest.runAll();
         deletingPassengerClearsSeatAndWorkingList();
         deletingBusReturnsPassengerToPlatform();
         updatingAssignedPassengerRequeuesForNewDestination();
@@ -166,9 +167,12 @@ public final class SimulationEngineTest {
     private static void checkEngineState(SimulationEngine engine) {
         Set<Person> known = new HashSet<Person>(engine.passengers());
         for (Bus bus : engine.buses()) {
-            for (Person passenger : bus.boardingLine) {
+            PassengerNode current = bus.boardingLine.frontNode();
+            while (current != null) {
+                Person passenger = current.passenger;
                 check(known.contains(passenger), "Unknown passenger in boarding line");
                 check(passenger.assignedBus == bus, "Incorrect boarding-line assignment");
+                current = current.next;
             }
             for (Person passenger : bus.seats) {
                 if (passenger != null) {
