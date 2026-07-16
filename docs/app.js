@@ -41,10 +41,13 @@ async function startSimulation() {
     placeholder.hidden = true;
     cheerpjCreateDisplay(1400, 780, displayParent);
 
+    const jarUrl = new URL("terminal-simulation.jar", window.location.href);
+    const cheerpjJarPath = `/app${jarUrl.pathname}`;
+
     statusText.textContent = "Starting the Java main class…";
     await cheerpjRunMain(
       "TerminalSimulation",
-      "/app/terminal-simulation.jar"
+      cheerpjJarPath
     );
 
     statusText.textContent = "Waiting for the Swing window…";
