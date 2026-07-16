@@ -50,6 +50,10 @@ See [CODE_WALKTHROUGH.md](CODE_WALKTHROUGH.md) for a complete beginner-friendly
 explanation of every Java file, class, field group, method, drawing section,
 queue operation, runtime trace, and test.
 
+See [CODE_BLOCK_WALKTHROUGH.md](CODE_BLOCK_WALKTHROUGH.md) for the snippet-first
+version: each important source block is shown first and then explained line by
+line in plain language.
+
 ## Project structure
 
 - TerminalSimulation builds the Swing window and handles user input.

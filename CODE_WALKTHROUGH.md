@@ -4,6 +4,9 @@ This document explains every Java file and every meaningful section of code in
 the project. It is written for group members who are still learning Java and
 need to explain how the current program works during the defense.
 
+For a version that shows each source snippet before explaining it, see
+[CODE_BLOCK_WALKTHROUGH.md](CODE_BLOCK_WALKTHROUGH.md).
+
 The project has one main assigned data structure: a **Queue implemented with
 linked passenger nodes**. Other structures only support the simulation:
 
