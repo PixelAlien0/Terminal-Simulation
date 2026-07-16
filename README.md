@@ -52,9 +52,13 @@ The browser page is only a launcher. The simulation, queue, nodes, models, and
 drawing code remain Java. The normal desktop commands above are still the most
 reliable option for the project defense.
 
-GitHub Actions compiles the Java source, runs both regression checks, packages
-`terminal-simulation.jar`, and publishes the `web` directory to GitHub Pages
-whenever `main` is updated.
+GitHub Pages publishes the browser launcher from the `docs` directory. Its
+`terminal-simulation.jar` is compiled for Java 8 compatibility with CheerpJ.
+After changing the Java source, rebuild that JAR on PowerShell and commit it:
+
+~~~powershell
+.\scripts\build-browser.ps1
+~~~
 
 ## Defense study guide
 
