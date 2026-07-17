@@ -8,6 +8,11 @@ back to the actual single-file source and tests on GitHub.
 > Do not memorize every line. For each feature, explain which class receives
 > the action, which method handles it, what data changes, and what appears next.
 
+## Recorded presentation
+
+Use the **[simple 6–7 minute presentation script](08%20-%20Recorded%20Presentation%20Script.md)**
+to demonstrate the animation and explain the important code without using slides.
+
 ## Recommended study order
 
 | Step | Lesson | Goal |
@@ -20,6 +25,7 @@ back to the actual single-file source and tests on GitHub.
 | 6 | [Class Guides](#class-guides) | Explain each class inside the single Java file. |
 | 7 | [Rapid Recall](05%20-%20Practice/Rapid%20Recall.md) | Answer likely teacher questions aloud. |
 | 8 | [Mock Defense](05%20-%20Practice/Mock%20Defense.md) | Practice follow-up “how” and “why” questions. |
+| 9 | [Recorded Presentation Script](08%20-%20Recorded%20Presentation%20Script.md) | Rehearse what to show and say in the video. |
 
 For a short schedule, follow the [Defense Study Route](01%20-%20Start%20Here/Defense%20Study%20Route.md).
 

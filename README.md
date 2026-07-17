@@ -70,6 +70,8 @@ recommended study order, queue traces, program-flow diagrams, class guides,
 practice questions, and test evidence. It works directly on GitHub and does not
 require Obsidian.
 
+For the recorded project presentation, use the **[simple presentation script](Defense/08%20-%20Recorded%20Presentation%20Script.md)**.
+
 See [STUDY_GUIDE.md](STUDY_GUIDE.md) for a code-centered walkthrough of the
 actual runtime flow, collection changes, state transitions, cleanup rules, and
 defense questions.
